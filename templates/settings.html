@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeeLine - 系统设置</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+</head>
+<body class="bg-gray-100">
+    <!-- 移动端顶部导航栏 -->
+    <div class="lg:hidden bg-white shadow-md">
+        <div class="flex items-center justify-between p-4">
+            <div class="flex items-center space-x-2">
+                <img src="/static/images/logo.jpg" alt="BeeLine Logo" class="h-8 w-8 object-cover">
+                <h1 class="text-xl font-bold text-gray-800">BeeLine</h1>
+            </div>
+            <button id="mobile-menu-button" class="text-gray-600 hover:text-gray-900">
+                <i class="fas fa-bars text-2xl"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- 移动端侧边栏 -->
+    <div id="mobile-menu" class="lg:hidden fixed inset-0 bg-gray-800 bg-opacity-50 z-40 hidden">
+        <div class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out -translate-x-full">
+            <div class="p-4 border-b">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <img src="/static/images/logo.jpg" alt="BeeLine Logo" class="h-8 w-8 object-cover">
+                        <h2 class="text-xl font-bold text-gray-800">菜单</h2>
+                    </div>
+                    <button id="close-menu" class="text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+                <p class="text-sm text-gray-600 mt-2">欢迎, {{ username }}</p>
+            </div>
+            <nav class="mt-4">
+                <a href="/" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-chart-line w-6"></i> 仪表盘
+                </a>
+                <a href="/scripts" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-code w-6"></i> 脚本管理
+                </a>
+                <a href="/tasks" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-clock w-6"></i> 任务调度
+                </a>
+                <a href="/packages" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-box w-6"></i> 包管理
+                </a>
+                <a href="/env" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-cog w-6"></i> 环境变量
+                </a>
+                <a href="/logs" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-list w-6"></i> 运行日志
+                </a>
+                 <a href="/about" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-info-circle w-6"></i> 关于
+                </a>
+                 <a href="/settings" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900 bg-gray-100">
+                    <i class="fas fa-user-cog w-6"></i> 系统设置
+                </a>
+                <a href="/logout" class="block px-4 py-3 text-red-600 hover:bg-gray-100 hover:text-red-900">
+                    <i class="fas fa-sign-out-alt w-6"></i> 退出登录
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <div class="flex h-screen">
+        <!-- 桌面端侧边栏 -->
+        <div class="hidden lg:block w-64 bg-white shadow-lg">
+            <div class="p-4 border-b">
+                <div class="flex items-center space-x-2">
+                    <img src="/static/images/logo.jpg" alt="BeeLine Logo" class="h-8 w-8 object-cover">
+                    <h1 class="text-xl font-bold text-gray-800">BeeLine</h1>
+                </div>
+                <p class="text-sm text-gray-600">欢迎, {{ username }}</p>
+            </div>
+            <nav class="mt-4">
+                <a href="/" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-chart-line w-6"></i> 仪表盘
+                </a>
+                <a href="/scripts" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-code w-6"></i> 脚本管理
+                </a>
+                <a href="/tasks" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-clock w-6"></i> 任务调度
+                </a>
+                <a href="/packages" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-box w-6"></i> 包管理
+                </a>
+                <a href="/env" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-cog w-6"></i> 环境变量
+                </a>
+                <a href="/logs" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-list w-6"></i> 运行日志
+                </a>
+                <a href="/about" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-info-circle w-6"></i> 关于
+                </a>
+                 <a href="/settings" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900 bg-gray-100">
+                    <i class="fas fa-user-cog w-6"></i> 系统设置
+                </a>
+                <a href="/logout" class="block px-4 py-3 text-red-600 hover:bg-gray-100 hover:text-red-900">
+                    <i class="fas fa-sign-out-alt w-6"></i> 退出登录
+                </a>
+            </nav>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="flex-1 overflow-auto">
+            <div class="p-4 lg:p-8">
+                <div class="bg-white rounded-lg shadow-md p-4 lg:p-6">
+                    <h2 class="text-xl lg:text-2xl font-bold mb-4">系统设置</h2>
+
+                    {% if message %}
+                        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+                            <span class="block sm:inline">{{ message }}</span>
+                        </div>
+                    {% endif %}
+
+                    {% if error %}
+                         <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                            <span class="block sm:inline">{{ error }}</span>
+                        </div>
+                    {% endif %}
+
+
+                    <form id="settings-form" method="POST" class="space-y-4">
+                         <div>
+                            <label for="current_username" class="block text-sm font-medium text-gray-700">当前用户名</label>
+                            <input type="text" id="current_username" value="{{ current_username }}" disabled
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-gray-100 cursor-not-allowed">
+                        </div>
+                         <div>
+                            <label for="new_username" class="block text-sm font-medium text-gray-700">新用户名 (可选)</label>
+                            <input type="text" name="new_username" id="new_username"
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                        <div>
+                            <label for="current_password" class="block text-sm font-medium text-gray-700">当前密码</label>
+                            <input type="password" name="current_password" id="current_password" required
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                        <div>
+                            <label for="new_password" class="block text-sm font-medium text-gray-700">新密码 (可选)</label>
+                            <input type="password" name="new_password" id="new_password"
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                         <div>
+                            <label for="confirm_password" class="block text-sm font-medium text-gray-700">确认新密码 (如果设置新密码)</label>
+                            <input type="password" name="confirm_password" id="confirm_password"
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                        <div class="flex justify-end">
+                            <button type="submit"
+                                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                保存设置
+                            </button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div id="toast" class="fixed bottom-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg transform translate-y-full opacity-0 transition-all duration-300">
+        <span id="toast-message"></span>
+    </div>
+
+    <script>
+        // Toast 提示功能
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            toastMessage.textContent = message;
+            toast.classList.remove('translate-y-full', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-full', 'opacity-0');
+            }, 3000);
+        }
+
+        // 移动端菜单控制
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const closeMenuButton = document.getElementById('close-menu');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const mobileMenuContent = mobileMenu.querySelector('div');
+
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.remove('hidden');
+            setTimeout(() => {
+                mobileMenuContent.classList.remove('-translate-x-full');
+            }, 10);
+        });
+
+        closeMenuButton.addEventListener('click', () => {
+            mobileMenuContent.classList.add('-translate-x-full');
+            setTimeout(() => {
+                mobileMenu.classList.add('hidden');
+            }, 300);
+        });
+
+        // 点击菜单外部关闭菜单
+        mobileMenu.addEventListener('click', (e) => {
+            if (e.target === mobileMenu) {
+                mobileMenuContent.classList.add('-translate-x-full');
+                setTimeout(() => {
+                    mobileMenu.classList.add('hidden');
+                }, 300);
+            }
+        });
+
+        // 可选：如果更倾向于客户端提交，可添加使用 fetch 的表单提交处理
+        // document.getElementById('settings-form').addEventListener('submit', async (e) => {
+        //     e.preventDefault();
+        //     const formData = new FormData(e.target);
+        //     const data = Object.fromEntries(formData.entries());
+        //
+        //     try {
+        //         const response = await fetch('/settings', {
+        //             method: 'POST',
+        //             headers: {
+        //                 'Content-Type': 'application/json', // Change if sending form data directly
+        //             },
+        //             body: JSON.stringify(data), // Change if sending form data directly
+        //         });
+        //
+        //         const result = await response.json();
+        //         if (response.ok) {
+        //             showToast(result.message || '设置已更新');
+        //             // Optional: Reload page or update UI as needed
+        //              setTimeout(() => {
+        //                  window.location.reload();
+        //              }, 1000);
+        //         } else {
+        //             showToast(result.detail || '更新设置失败');
+        //         }
+        //     } catch (error) {
+        //         showToast('更新设置失败');
+        //     }
+        // });
+    </script>
+</body>
+</html>

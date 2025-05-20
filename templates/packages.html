@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeeLine - 包管理</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+</head>
+<body class="bg-gray-100">
+    <!-- 移动端顶部导航栏 -->
+    <div class="lg:hidden bg-white shadow-md">
+        <div class="flex items-center justify-between p-4">
+            <div class="flex items-center space-x-2">
+                <img src="/static/images/logo.jpg" alt="BeeLine Logo" class="h-8 w-8 object-cover">
+                <h1 class="text-xl font-bold text-gray-800">BeeLine</h1>
+            </div>
+            <button id="mobile-menu-button" class="text-gray-600 hover:text-gray-900">
+                <i class="fas fa-bars text-2xl"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- 移动端侧边栏 -->
+    <div id="mobile-menu" class="lg:hidden fixed inset-0 bg-gray-800 bg-opacity-50 z-40 hidden">
+        <div class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out -translate-x-full">
+            <div class="p-4 border-b">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <img src="/static/images/logo.jpg" alt="BeeLine Logo" class="h-8 w-8 object-cover">
+                        <h2 class="text-xl font-bold text-gray-800">菜单</h2>
+                    </div>
+                    <button id="close-menu" class="text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+                <p class="text-sm text-gray-600 mt-2">欢迎, {{ username }}</p>
+            </div>
+            <nav class="mt-4">
+                <a href="/" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-chart-line w-6"></i> 仪表盘
+                </a>
+                <a href="/scripts" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-code w-6"></i> 脚本管理
+                </a>
+                <a href="/tasks" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-clock w-6"></i> 任务调度
+                </a>
+                <a href="/packages" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900 bg-gray-100">
+                    <i class="fas fa-box w-6"></i> 包管理
+                </a>
+                <a href="/env" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-cog w-6"></i> 环境变量
+                </a>
+                <a href="/logs" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-list w-6"></i> 运行日志
+                </a>
+                <a href="/about" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-info-circle w-6"></i> 关于
+                </a>
+                <a href="/settings" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-user-cog w-6"></i> 系统设置
+                </a>
+                <a href="/logout" class="block px-4 py-3 text-red-600 hover:bg-gray-100 hover:text-red-900">
+                    <i class="fas fa-sign-out-alt w-6"></i> 退出登录
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <div class="flex h-screen">
+        <!-- 桌面端侧边栏 -->
+        <div class="hidden lg:block w-64 bg-white shadow-lg">
+            <div class="p-4 border-b">
+                <div class="flex items-center space-x-2">
+                    <img src="/static/images/logo.jpg" alt="BeeLine Logo" class="h-8 w-8 object-cover">
+                    <h1 class="text-xl font-bold text-gray-800">BeeLine</h1>
+                </div>
+                <p class="text-sm text-gray-600">欢迎, {{ username }}</p>
+            </div>
+            <nav class="mt-4">
+                <a href="/" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-chart-line w-6"></i> 仪表盘
+                </a>
+                <a href="/scripts" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-code w-6"></i> 脚本管理
+                </a>
+                <a href="/tasks" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-clock w-6"></i> 任务调度
+                </a>
+                <a href="/packages" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900 bg-gray-100">
+                    <i class="fas fa-box w-6"></i> 包管理
+                </a>
+                <a href="/env" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-cog w-6"></i> 环境变量
+                </a>
+                <a href="/logs" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-list w-6"></i> 运行日志
+                </a>
+                <a href="/about" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-info-circle w-6"></i> 关于
+                </a>
+                <a href="/settings" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-user-cog w-6"></i> 系统设置
+                </a>
+                <a href="/logout" class="block px-4 py-3 text-red-600 hover:bg-gray-100 hover:text-red-900">
+                    <i class="fas fa-sign-out-alt w-6"></i> 退出登录
+                </a>
+            </nav>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="flex-1 overflow-auto">
+            <div class="p-4 lg:p-8">
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="p-4 lg:p-6 border-b">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-xl lg:text-2xl font-bold">包管理 (<span id="package-count">0</span>个)</h2>
+                            <div class="space-x-2">
+                                <button onclick="showInstallPackageModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                                    <i class="fas fa-plus mr-2"></i>安装包
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <div class="relative">
+                                <input type="text" id="search-input" placeholder="搜索包..." 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                                    <i class="fas fa-search text-gray-400"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 包列表 -->
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">包名</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">版本</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="packages-table-body" class="bg-white divide-y divide-gray-200">
+                                <tr id="loading-row" class="hidden">
+                                    <td colspan="3" class="px-6 py-8 text-center">
+                                        <div class="flex items-center justify-center space-x-2">
+                                            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                                            <span class="text-gray-600">加载中...</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 安装包模态框 -->
+    <div id="install-package-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-medium text-gray-900">安装包</h3>
+                        <button onclick="hideInstallPackageModal()" class="text-gray-400 hover:text-gray-500">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <form id="install-package-form" class="space-y-4">
+                        <div>
+                            <label for="package-name" class="block text-sm font-medium text-gray-700">包名</label>
+                            <input type="text" name="name" id="package-name" required placeholder="例如：requests"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label for="package-version" class="block text-sm font-medium text-gray-700">版本（可选）</label>
+                            <input type="text" name="version" id="package-version" placeholder="例如：2.31.0"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                        <div class="flex justify-end space-x-3">
+                            <button type="button" onclick="hideInstallPackageModal()"
+                                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                取消
+                            </button>
+                            <button type="submit"
+                                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                安装
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div id="toast" class="fixed bottom-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg transform translate-y-full opacity-0 transition-all duration-300">
+        <span id="toast-message"></span>
+    </div>
+
+    <script>
+        // 搜索防抖函数
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // 显示加载状态
+        function showLoading() {
+            const loadingRow = document.getElementById('loading-row');
+            loadingRow.classList.remove('hidden');
+        }
+
+        // 隐藏加载状态
+        function hideLoading() {
+            const loadingRow = document.getElementById('loading-row');
+            loadingRow.classList.add('hidden');
+        }
+
+        // 加载包列表
+        async function loadPackages(search = "") {
+            showLoading();
+            try {
+                const response = await fetch(`/api/packages?search=${encodeURIComponent(search)}`);
+                const data = await response.json();
+                
+                // 更新包数量
+                document.getElementById('package-count').textContent = data.package_count;
+                
+                // 更新包列表
+                const tbody = document.getElementById('packages-table-body');
+                // 保留加载行
+                const loadingRow = document.getElementById('loading-row');
+                tbody.innerHTML = '';
+                tbody.appendChild(loadingRow);
+                
+                data.packages.forEach(package => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <i class="fas fa-box text-blue-600 mr-2"></i>
+                                <span class="text-sm font-medium text-gray-900">${package.name}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${package.version}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button onclick="uninstallPackage('${package.name}')" class="text-red-600 hover:text-red-900">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                console.error('加载包列表失败:', error);
+                showToast('加载包列表失败');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // 搜索处理
+        const searchInput = document.getElementById('search-input');
+        const debouncedSearch = debounce((value) => {
+            loadPackages(value);
+        }, 300);
+
+        searchInput.addEventListener('input', (e) => {
+            debouncedSearch(e.target.value);
+        });
+
+        // 页面加载时加载包列表
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPackages();
+        });
+
+        // Toast 提示功能
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            toastMessage.textContent = message;
+            toast.classList.remove('translate-y-full', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-full', 'opacity-0');
+            }, 3000);
+        }
+
+        // 移动端菜单控制
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const closeMenuButton = document.getElementById('close-menu');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const mobileMenuContent = mobileMenu.querySelector('div');
+
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.remove('hidden');
+            setTimeout(() => {
+                mobileMenuContent.classList.remove('-translate-x-full');
+            }, 10);
+        });
+
+        closeMenuButton.addEventListener('click', () => {
+            mobileMenuContent.classList.add('-translate-x-full');
+            setTimeout(() => {
+                mobileMenu.classList.add('hidden');
+            }, 300);
+        });
+
+        mobileMenu.addEventListener('click', (e) => {
+            if (e.target === mobileMenu) {
+                mobileMenuContent.classList.add('-translate-x-full');
+                setTimeout(() => {
+                    mobileMenu.classList.add('hidden');
+                }, 300);
+            }
+        });
+
+        // 安装包模态框控制
+        function showInstallPackageModal() {
+            document.getElementById('install-package-modal').classList.remove('hidden');
+        }
+
+        function hideInstallPackageModal() {
+            document.getElementById('install-package-modal').classList.add('hidden');
+        }
+
+        // 包操作
+        async function uninstallPackage(name) {
+            if (!confirm(`确定要卸载 ${name} 包吗？`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/packages/${name}`, {
+                    method: 'DELETE',
+                });
+
+                if (response.ok) {
+                    showToast('包已卸载');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showToast('卸载失败');
+                }
+            } catch (error) {
+                showToast('卸载失败');
+            }
+        }
+
+        // 表单提交处理
+        document.getElementById('install-package-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+
+            try {
+                const response = await fetch('/packages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data),
+                });
+
+                if (response.ok) {
+                    showToast('包已安装');
+                    hideInstallPackageModal();
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showToast('安装失败');
+                }
+            } catch (error) {
+                showToast('安装失败');
+            }
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeeLine - 关于</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+</head>
+<body class="bg-gray-100">
+    <!-- 移动端顶部导航栏 -->
+    <div class="lg:hidden bg-white shadow-md">
+        <div class="flex items-center justify-between p-4">
+            <div class="flex items-center space-x-2">
+                <img src="/static/images/logo.jpg" alt="BeeLine Logo" class="h-8 w-8 object-cover">
+                <h1 class="text-xl font-bold text-gray-800">BeeLine</h1>
+            </div>
+            <button id="mobile-menu-button" class="text-gray-600 hover:text-gray-900">
+                <i class="fas fa-bars text-2xl"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- 移动端侧边栏 -->
+    <div id="mobile-menu" class="lg:hidden fixed inset-0 bg-gray-800 bg-opacity-50 z-40 hidden">
+        <div class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out -translate-x-full">
+            <div class="p-4 border-b">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <img src="/static/images/logo.jpg" alt="BeeLine Logo" class="h-8 w-8 object-cover">
+                        <h2 class="text-xl font-bold text-gray-800">菜单</h2>
+                    </div>
+                    <button id="close-menu" class="text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+                <p class="text-sm text-gray-600 mt-2">欢迎, {{ username }}</p>
+            </div>
+            <nav class="mt-4">
+                <a href="/" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-chart-line w-6"></i> 仪表盘
+                </a>
+                <a href="/scripts" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-code w-6"></i> 脚本管理
+                </a>
+                <a href="/tasks" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-clock w-6"></i> 任务调度
+                </a>
+                <a href="/packages" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-box w-6"></i> 包管理
+                </a>
+                <a href="/env" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-cog w-6"></i> 环境变量
+                </a>
+                <a href="/logs" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-list w-6"></i> 运行日志
+                </a>
+                <a href="/about" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900 bg-gray-100">
+                    <i class="fas fa-info-circle w-6"></i> 关于
+                </a>
+                <a href="/settings" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-user-cog w-6"></i> 系统设置
+                </a>
+                <a href="/logout" class="block px-4 py-3 text-red-600 hover:bg-gray-100 hover:text-red-900">
+                    <i class="fas fa-sign-out-alt w-6"></i> 退出登录
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <div class="flex h-screen">
+        <!-- 桌面端侧边栏 -->
+        <div class="hidden lg:block w-64 bg-white shadow-lg">
+            <div class="p-4 border-b">
+                <div class="flex items-center space-x-2">
+                    <img src="/static/images/logo.jpg" alt="BeeLine Logo" class="h-8 w-8 object-cover">
+                    <h1 class="text-xl font-bold text-gray-800">BeeLine</h1>
+                </div>
+                <p class="text-sm text-gray-600">欢迎, {{ username }}</p>
+            </div>
+            <nav class="mt-4">
+                <a href="/" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-chart-line w-6"></i> 仪表盘
+                </a>
+                <a href="/scripts" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-code w-6"></i> 脚本管理
+                </a>
+                <a href="/tasks" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-clock w-6"></i> 任务调度
+                </a>
+                <a href="/packages" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-box w-6"></i> 包管理
+                </a>
+                <a href="/env" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-cog w-6"></i> 环境变量
+                </a>
+                <a href="/logs" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-list w-6"></i> 运行日志
+                </a>
+                 <a href="/about" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900 bg-gray-100">
+                    <i class="fas fa-info-circle w-6"></i> 关于
+                </a>
+                <a href="/settings" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-user-cog w-6"></i> 系统设置
+                </a>
+                <a href="/logout" class="block px-4 py-3 text-red-600 hover:bg-gray-100 hover:text-red-900">
+                    <i class="fas fa-sign-out-alt w-6"></i> 退出登录
+                </a>
+            </nav>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="flex-1 overflow-auto">
+            <div class="p-4 lg:p-8">
+                <div class="bg-white rounded-lg shadow-md p-4 lg:p-6">
+                    <h2 class="text-xl lg:text-2xl font-bold mb-4">关于 BeeLine Web Scheduling Console</h2>
+
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">平台简介</h3>
+                        <div class="prose max-w-none">
+                            <p>BeeLine是一个基于FastAPI的Python脚本调度运行平台，提供Web界面来管理Python脚本的执行和调度，特别适合需要定期执行脚本的场景。</p>
+                            
+                            <div class="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                <h4 class="font-semibold text-blue-800 mb-2">核心价值</h4>
+                                <ul class="list-disc pl-5 space-y-1 text-blue-700">
+                                    <li>集中化管理所有Python脚本</li>
+                                    <li>可视化任务调度和监控</li>
+                                    <li>简化脚本部署和执行流程</li>
+                                    <li>提供完整的执行日志和错误追踪</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">功能特点</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- 脚本管理 -->
+                            <div class="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                                <div class="flex items-center mb-2">
+                                    <div class="bg-purple-100 p-2 rounded-full mr-3">
+                                        <i class="fas fa-code text-purple-600"></i>
+                                    </div>
+                                    <h4 class="font-semibold">脚本管理</h4>
+                                </div>
+                                <ul class="text-sm text-gray-600 space-y-1">
+                                    <li>• 上传、编辑和删除 Python 脚本</li>
+                                    <li>• 语法高亮和代码格式化</li>
+                                    <!-- <li>• 脚本依赖分析</li> -->
+                                </ul>
+                            </div>
+                            
+                            <!-- 任务调度 -->
+                            <div class="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                                <div class="flex items-center mb-2">
+                                    <div class="bg-green-100 p-2 rounded-full mr-3">
+                                        <i class="fas fa-clock text-green-600"></i>
+                                    </div>
+                                    <h4 class="font-semibold">任务调度</h4>
+                                </div>
+                                <ul class="text-sm text-gray-600 space-y-1">
+                                    <li>• 手动执行和定时执行</li>
+                                    <li>• 支持Cron表达式配置</li>
+                                </ul>
+                            </div>
+                            
+                            <!-- 包管理 -->
+                            <div class="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                                <div class="flex items-center mb-2">
+                                    <div class="bg-yellow-100 p-2 rounded-full mr-3">
+                                        <i class="fas fa-box text-yellow-600"></i>
+                                    </div>
+                                    <h4 class="font-semibold">包管理</h4>
+                                </div>
+                                <ul class="text-sm text-gray-600 space-y-1">
+                                    <li>• 查看已安装Python包</li>
+                                    <li>• 安装和卸载包</li>
+                                    <li>• 包版本管理</li>
+                                </ul>
+                            </div>
+                            
+                            <!-- 环境管理 -->
+                            <div class="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                                <div class="flex items-center mb-2">
+                                    <div class="bg-red-100 p-2 rounded-full mr-3">
+                                        <i class="fas fa-cog text-red-600"></i>
+                                    </div>
+                                    <h4 class="font-semibold">环境变量</h4>
+                                </div>
+                                <ul class="text-sm text-gray-600 space-y-1">
+                                    <li>• 脚本特定环境变量</li>
+                                    <li>• 环境变量分组</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+                    
+                    <!-- 项目信息 -->
+                    <div class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl my-8">
+                        <div class="p-8">
+                          <div class="mt-2 flex items-center">
+                            <div class="relative h-10 w-10 mr-3">
+                              <img 
+                                src="https://avatars.githubusercontent.com/u/84219304?v=4" 
+                                class="rounded-full h-full w-full object-cover"
+                                onerror="this.onerror=null;this.parentElement.innerHTML='<svg class=\'h-10 w-10 text-gray-700\' fill=\'currentColor\' viewBox=\'0 0 24 24\'><path fill-rule=\'evenodd\' clip-rule=\'evenodd\' d=\'M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z\'></path></svg>';"
+                              >
+                            </div>
+                            <div class="flex-1">
+                              <div class="flex justify-between items-baseline">
+                                <p class="text-lg leading-tight font-medium text-black"><a href="https://github.com/3ixi/BeeLine" target="_blank" rel="noopener noreferrer">BeeLine Web Scheduling Console</a></p>
+                                <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium ml-2">
+                                  v{{ version }}
+                                </div>
+                              </div>
+                              <p class="text-gray-500 mt-1">作者: <span class="font-semibold text-gray-700"><a href="https://github.com/3iXi" target="_blank" rel="noopener noreferrer">3iXi</a></span></p>
+                            </div>
+                          </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div id="toast" class="fixed bottom-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg transform translate-y-full opacity-0 transition-all duration-300">
+        <span id="toast-message"></span>
+    </div>
+
+    <script>
+        // Toast 提示功能
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            toastMessage.textContent = message;
+            toast.classList.remove('translate-y-full', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-full', 'opacity-0');
+            }, 3000);
+        }
+
+        // 移动端菜单控制
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const closeMenuButton = document.getElementById('close-menu');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const mobileMenuContent = mobileMenu.querySelector('div');
+
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.remove('hidden');
+            setTimeout(() => {
+                mobileMenuContent.classList.remove('-translate-x-full');
+            }, 10);
+        });
+
+        closeMenuButton.addEventListener('click', () => {
+            mobileMenuContent.classList.add('-translate-x-full');
+            setTimeout(() => {
+                mobileMenu.classList.add('hidden');
+            }, 300);
+        });
+
+        // 点击菜单外部关闭菜单
+        mobileMenu.addEventListener('click', (e) => {
+            if (e.target === mobileMenu) {
+                mobileMenuContent.classList.add('-translate-x-full');
+                setTimeout(() => {
+                    mobileMenu.classList.add('hidden');
+                }, 300);
+            }
+        });
+    </script>
+</body>
+</html>

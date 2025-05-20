@@ -1,0 +1,23 @@
+# ===== 核心框架 =====
+fastapi>=0.104.1          # FastAPI主框架
+uvicorn>=0.23.2           # ASGI服务器
+python-multipart>=0.0.6   # 文件上传支持
+
+# ===== 模板渲染 =====
+jinja2>=3.1.2             # HTML模板引擎
+
+# ===== 数据库相关 =====
+sqlalchemy>=2.0.23        # ORM工具
+
+# ===== 安全与身份验证 =====
+python-jose>=3.3.0        # JWT支持
+passlib>=1.7.4            # 密码哈希
+bcrypt>=4.0.1             # 强加密算法
+
+# ===== 工具库 =====
+croniter>=2.0.1           # Cron表达式解析
+python-dateutil>=2.8.2    # 日期处理
+typing-extensions>=4.12.2 # 类型注解支持
+
+# ===== 调度执行 =====
+apscheduler>=3.10.4       # 调度脚本执行

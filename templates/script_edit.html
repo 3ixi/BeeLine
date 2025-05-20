@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeeLine - 编辑脚本</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+</head>
+<body class="bg-gray-100">
+    <!-- 移动端顶部导航栏 -->
+    <div class="lg:hidden bg-white shadow-md">
+        <div class="flex items-center justify-between p-4">
+            <div class="flex items-center space-x-2">
+                <img src="/static/images/logo.jpg" alt="BeeLine Logo" class="h-8 w-8 object-cover">
+                <h1 class="text-xl font-bold text-gray-800">BeeLine</h1>
+            </div>
+            <button id="mobile-menu-button" class="text-gray-600 hover:text-gray-900">
+                <i class="fas fa-bars text-2xl"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- 移动端侧边栏 -->
+    <div id="mobile-menu" class="lg:hidden fixed inset-0 bg-gray-800 bg-opacity-50 z-40 hidden">
+        <div class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out -translate-x-full">
+            <div class="p-4 border-b">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <img src="/static/images/logo.jpg" alt="BeeLine Logo" class="h-8 w-8 object-cover">
+                        <h2 class="text-xl font-bold text-gray-800">菜单</h2>
+                    </div>
+                    <button id="close-menu" class="text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+                <p class="text-sm text-gray-600 mt-2">欢迎, {{ username }}</p>
+            </div>
+            <nav class="mt-4">
+                <a href="/" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-chart-line w-6"></i> 仪表盘
+                </a>
+                <a href="/scripts" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900 bg-gray-100">
+                    <i class="fas fa-code w-6"></i> 脚本管理
+                </a>
+                <a href="/tasks" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-clock w-6"></i> 任务调度
+                </a>
+                <a href="/packages" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-box w-6"></i> 包管理
+                </a>
+                <a href="/env" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-cog w-6"></i> 环境变量
+                </a>
+                <a href="/logs" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-list w-6"></i> 运行日志
+                </a>
+                <a href="/about" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-info-circle w-6"></i> 关于
+                </a>
+                <a href="/settings" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-user-cog w-6"></i> 系统设置
+                </a>
+                <a href="/logout" class="block px-4 py-3 text-red-600 hover:bg-gray-100 hover:text-red-900">
+                    <i class="fas fa-sign-out-alt w-6"></i> 退出登录
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <div class="flex h-screen">
+        <!-- 桌面端侧边栏 -->
+        <div class="hidden lg:block w-64 bg-white shadow-lg">
+            <div class="p-4 border-b">
+                <div class="flex items-center space-x-2">
+                    <img src="/static/images/logo.jpg" alt="BeeLine Logo" class="h-8 w-8 object-cover">
+                    <h1 class="text-xl font-bold text-gray-800">BeeLine</h1>
+                </div>
+                <p class="text-sm text-gray-600">欢迎, {{ username }}</p>
+            </div>
+            <nav class="mt-4">
+                <a href="/" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-chart-line w-6"></i> 仪表盘
+                </a>
+                <a href="/scripts" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900 bg-gray-100">
+                    <i class="fas fa-code w-6"></i> 脚本管理
+                </a>
+                <a href="/tasks" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-clock w-6"></i> 任务调度
+                </a>
+                <a href="/packages" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-box w-6"></i> 包管理
+                </a>
+                <a href="/env" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-cog w-6"></i> 环境变量
+                </a>
+                <a href="/logs" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-list w-6"></i> 运行日志
+                </a>
+                <a href="/about" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-info-circle w-6"></i> 关于
+                </a>
+                <a href="/settings" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-user-cog w-6"></i> 系统设置
+                </a>
+                <a href="/logout" class="block px-4 py-3 text-red-600 hover:bg-gray-100 hover:text-red-900">
+                    <i class="fas fa-sign-out-alt w-6"></i> 退出登录
+                </a>
+            </nav>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="flex-1 overflow-auto">
+            <div class="p-4 lg:p-8">
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="p-4 lg:p-6 border-b">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-xl lg:text-2xl font-bold">编辑脚本</h2>
+                            <div class="space-x-2">
+                                <button onclick="saveScript()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                                    <i class="fas fa-save mr-2"></i>保存
+                                </button>
+                                <a href="/scripts" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors duration-200">
+                                    <i class="fas fa-times mr-2"></i>取消
+                                </a>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-sm text-gray-600">
+                            <div class="mb-4">
+                                <label for="script-filename" class="block text-sm font-medium text-gray-700 mb-1">文件名</label>
+                                <div class="relative rounded-md shadow-sm">
+                                    <input type="text" id="script-filename" name="filename" value="{{ script.filename }}"
+                                        class="block w-full rounded-md border-gray-300 pl-3 pr-10 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition duration-150 ease-in-out"
+                                        placeholder="请输入文件名">
+                                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                        <i class="fas fa-file-code text-gray-400"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label for="script-description" class="block text-sm font-medium text-gray-700 mb-1">描述</label>
+                                <div class="relative rounded-md shadow-sm">
+                                    <textarea id="script-description" name="description" rows="2"
+                                        class="block w-full rounded-md border-gray-300 pl-3 pr-10 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition duration-150 ease-in-out resize-none"
+                                        placeholder="请输入脚本描述">{{ script.description }}</textarea>
+                                    <div class="absolute top-2 right-2 flex items-center pr-3 pointer-events-none">
+                                        <i class="fas fa-align-left text-gray-400"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-4 lg:p-6">
+                        <form id="edit-form" action="/scripts/{{ script.id }}/edit" method="post">
+                            <textarea id="editor" name="content">{{ content }}</textarea>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div id="toast" class="fixed bottom-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg transform translate-y-full opacity-0 transition-all duration-300">
+        <span id="toast-message"></span>
+    </div>
+
+    <script>
+        // Toast 提示功能
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            toastMessage.textContent = message;
+            toast.classList.remove('translate-y-full', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-full', 'opacity-0');
+            }, 3000);
+        }
+
+        // 移动端菜单控制
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const closeMenuButton = document.getElementById('close-menu');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const mobileMenuContent = mobileMenu.querySelector('div');
+
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.remove('hidden');
+            setTimeout(() => {
+                mobileMenuContent.classList.remove('-translate-x-full');
+            }, 10);
+        });
+
+        closeMenuButton.addEventListener('click', () => {
+            mobileMenuContent.classList.add('-translate-x-full');
+            setTimeout(() => {
+                mobileMenu.classList.add('hidden');
+            }, 300);
+        });
+
+        mobileMenu.addEventListener('click', (e) => {
+            if (e.target === mobileMenu) {
+                mobileMenuContent.classList.add('-translate-x-full');
+                setTimeout(() => {
+                    mobileMenu.classList.add('hidden');
+                }, 300);
+            }
+        });
+
+        // CodeMirror 编辑器
+        const editor = CodeMirror.fromTextArea(document.getElementById('editor'), {
+            mode: 'python',
+            theme: 'monokai',
+            lineNumbers: true,
+            indentUnit: 4,
+            indentWithTabs: false,
+            lineWrapping: true,
+            matchBrackets: true,
+            autoCloseBrackets: true,
+            extraKeys: {
+                'Tab': 'indentMore',
+                'Shift-Tab': 'indentLess'
+            }
+        });
+
+        // 保存脚本
+        async function saveScript() {
+            const content = editor.getValue();
+            const filename = document.getElementById('script-filename').value;
+            const description = document.getElementById('script-description').value;
+            const formData = new FormData();
+            formData.append('content', content);
+            formData.append('filename', filename);
+            formData.append('description', description);
+
+            try {
+                const response = await fetch('/scripts/{{ script.id }}/edit', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    showToast('保存成功');
+                    setTimeout(() => {
+                        window.location.href = '/scripts';
+                    }, 1000);
+                } else {
+                    showToast('保存失败');
+                }
+            } catch (error) {
+                showToast('保存失败');
+            }
+        }
+
+        // 调整编辑器高度
+        function adjustEditorHeight() {
+            const height = window.innerHeight - 200;
+            editor.setSize(null, height);
+        }
+
+        window.addEventListener('resize', adjustEditorHeight);
+        adjustEditorHeight();
+    </script>
+</body>
+</html> 

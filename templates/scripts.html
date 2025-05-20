@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeeLine - 脚本管理</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+</head>
+<body class="bg-gray-100">
+    <!-- 移动端顶部导航栏 -->
+    <div class="lg:hidden bg-white shadow-md">
+        <div class="flex items-center justify-between p-4">
+            <div class="flex items-center space-x-2">
+                <img src="/static/images/logo.jpg" alt="BeeLine Logo" class="h-8 w-8 object-cover">
+                <h1 class="text-xl font-bold text-gray-800">BeeLine</h1>
+            </div>
+            <button id="mobile-menu-button" class="text-gray-600 hover:text-gray-900">
+                <i class="fas fa-bars text-2xl"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- 移动端侧边栏 -->
+    <div id="mobile-menu" class="lg:hidden fixed inset-0 bg-gray-800 bg-opacity-50 z-40 hidden">
+        <div class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out -translate-x-full">
+            <div class="p-4 border-b">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <img src="/static/images/logo.jpg" alt="BeeLine Logo" class="h-8 w-8 object-cover">
+                        <h2 class="text-xl font-bold text-gray-800">菜单</h2>
+                    </div>
+                    <button id="close-menu" class="text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+                <p class="text-sm text-gray-600 mt-2">欢迎, {{ username }}</p>
+            </div>
+            <nav class="mt-4">
+                <a href="/" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-chart-line w-6"></i> 仪表盘
+                </a>
+                <a href="/scripts" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900 bg-gray-100">
+                    <i class="fas fa-code w-6"></i> 脚本管理
+                </a>
+                <a href="/tasks" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-clock w-6"></i> 任务调度
+                </a>
+                <a href="/packages" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-box w-6"></i> 包管理
+                </a>
+                <a href="/env" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-cog w-6"></i> 环境变量
+                </a>
+                <a href="/logs" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-list w-6"></i> 运行日志
+                </a>
+                <a href="/about" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-info-circle w-6"></i> 关于
+                </a>
+                <a href="/settings" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-user-cog w-6"></i> 系统设置
+                </a>
+                <a href="/logout" class="block px-4 py-3 text-red-600 hover:bg-gray-100 hover:text-red-900">
+                    <i class="fas fa-sign-out-alt w-6"></i> 退出登录
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <div class="flex h-screen">
+        <!-- 桌面端侧边栏 -->
+        <div class="hidden lg:block w-64 bg-white shadow-lg">
+            <div class="p-4 border-b">
+                <div class="flex items-center space-x-2">
+                    <img src="/static/images/logo.jpg" alt="BeeLine Logo" class="h-8 w-8 object-cover">
+                    <h1 class="text-xl font-bold text-gray-800">BeeLine</h1>
+                </div>
+                <p class="text-sm text-gray-600">欢迎, {{ username }}</p>
+            </div>
+            <nav class="mt-4">
+                <a href="/" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-chart-line w-6"></i> 仪表盘
+                </a>
+                <a href="/scripts" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900 bg-gray-100">
+                    <i class="fas fa-code w-6"></i> 脚本管理
+                </a>
+                <a href="/tasks" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-clock w-6"></i> 任务调度
+                </a>
+                <a href="/packages" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-box w-6"></i> 包管理
+                </a>
+                <a href="/env" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-cog w-6"></i> 环境变量
+                </a>
+                <a href="/logs" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-list w-6"></i> 运行日志
+                </a>
+                <a href="/about" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-info-circle w-6"></i> 关于
+                </a>
+                <a href="/settings" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-user-cog w-6"></i> 系统设置
+                </a>
+                <a href="/logout" class="block px-4 py-3 text-red-600 hover:bg-gray-100 hover:text-red-900">
+                    <i class="fas fa-sign-out-alt w-6"></i> 退出登录
+                </a>
+            </nav>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="flex-1 overflow-auto">
+            <div class="p-4 lg:p-8">
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="p-4 lg:p-6 border-b">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-xl lg:text-2xl font-bold">脚本管理</h2>
+                            <div class="space-x-2">
+                                <button onclick="showNewScriptModal()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200">
+                                    <i class="fas fa-plus mr-2"></i>新建脚本
+                                </button>
+                                <button onclick="showUploadModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                                    <i class="fas fa-upload mr-2"></i>上传脚本
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                <!-- 脚本列表 -->
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">名称</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">文件名</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">描述</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                {% for script in scripts %}
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <i class="fab fa-python text-blue-600 mr-2"></i>
+                                            <span class="text-sm font-medium text-gray-900">{{ script.name }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-500">{{ script.filename }}</div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="text-sm text-gray-500">{{ script.description }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-500">{{ script.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <div class="flex items-center space-x-3">
+                                             <!-- 编辑按钮 -->
+                                            <div class="group relative">
+                                                <button onclick="editScript({{ script.id }})" class="text-blue-600 hover:text-blue-900">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <span class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                                                    编辑
+                                                    <span class="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-800 transform rotate-45 -mb-1"></span>
+                                                </span>
+                                            </div>
+
+                                            <!-- 导出按钮 -->
+                                            <div class="group relative">
+                                                <a href="/scripts/{{ script.id }}/export" class="text-purple-600 hover:text-purple-900" download>
+                                                    <i class="fas fa-download"></i>
+                                                </a>
+                                                <span class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                                                    导出
+                                                    <span class="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-800 transform rotate-45 -mb-1"></span>
+                                                </span>
+                                            </div>
+
+                                            <!-- 删除按钮 -->
+                                            <div class="group relative">
+                                                <button onclick="deleteScript({{ script.id }})" class="text-red-600 hover:text-red-900">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                                <span class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                                                    删除
+                                                    <span class="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-800 transform rotate-45 -mb-1"></span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 上传脚本模态框 -->
+    <div id="upload-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-medium text-gray-900">上传脚本</h3>
+                        <button onclick="hideUploadModal()" class="text-gray-400 hover:text-gray-500">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <form id="upload-form" action="/scripts/upload" method="post" enctype="multipart/form-data" class="space-y-4">
+                        <div>
+                            <label for="script-name" class="block text-sm font-medium text-gray-700 mb-1">脚本名称</label>
+                             <div class="relative rounded-md shadow-sm">
+                                <input type="text" name="name" id="script-name" required
+                                    class="block w-full rounded-md border-gray-300 pl-3 pr-10 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition duration-150 ease-in-out"
+                                    placeholder="请输入脚本名称">
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                    <i class="fas fa-file-signature text-gray-400"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="script-description" class="block text-sm font-medium text-gray-700 mb-1">描述</label>
+                            <div class="relative rounded-md shadow-sm">
+                                <textarea name="description" id="script-description" rows="3"
+                                    class="block w-full rounded-md border-gray-300 pl-3 pr-10 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition duration-150 ease-in-out resize-none"
+                                    placeholder="请输入脚本描述"></textarea>
+                                <div class="absolute top-2 right-2 flex items-center pr-3 pointer-events-none">
+                                    <i class="fas fa-align-left text-gray-400"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="script-file" class="block text-sm font-medium text-gray-700 mb-1">选择文件</label>
+                            <input type="file" name="file" id="script-file" accept=".py" required
+                                class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        </div>
+                        <div class="flex justify-end space-x-3">
+                            <button type="button" onclick="hideUploadModal()"
+                                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                取消
+                            </button>
+                            <button type="submit"
+                                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                上传
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新建脚本模态框 -->
+    <div id="new-script-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-medium text-gray-900">新建脚本</h3>
+                        <button onclick="hideNewScriptModal()" class="text-gray-400 hover:text-gray-500">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <form id="new-script-form" class="space-y-4">
+                        <div>
+                            <label for="new-script-name" class="block text-sm font-medium text-gray-700 mb-1">脚本名称</label>
+                            <div class="relative rounded-md shadow-sm">
+                                <input type="text" name="name" id="new-script-name" required
+                                    class="block w-full rounded-md border-gray-300 pl-3 pr-10 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm transition duration-150 ease-in-out"
+                                    placeholder="请输入脚本名称">
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                    <i class="fas fa-file-signature text-gray-400"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="new-script-filename" class="block text-sm font-medium text-gray-700 mb-1">文件名</label>
+                             <div class="relative rounded-md shadow-sm">
+                                <input type="text" name="filename" id="new-script-filename" required
+                                    class="block w-full rounded-md border-gray-300 pl-3 pr-10 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm transition duration-150 ease-in-out"
+                                    placeholder="请输入文件名 (例如: my_script.py)">
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                    <i class="fas fa-file-code text-gray-400"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="new-script-description" class="block text-sm font-medium text-gray-700 mb-1">描述</label>
+                            <div class="relative rounded-md shadow-sm">
+                                <textarea name="description" id="new-script-description" rows="3"
+                                    class="block w-full rounded-md border-gray-300 pl-3 pr-10 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm transition duration-150 ease-in-out resize-none"
+                                    placeholder="请输入脚本描述"></textarea>
+                                <div class="absolute top-2 right-2 flex items-center pr-3 pointer-events-none">
+                                    <i class="fas fa-align-left text-gray-400"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="new-script-content" class="block text-sm font-medium text-gray-700">脚本内容</label>
+                            <textarea id="new-script-content" name="content"></textarea>
+                        </div>
+                        <div class="flex justify-end space-x-3">
+                            <button type="button" onclick="hideNewScriptModal()"
+                                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                取消
+                            </button>
+                            <button type="submit"
+                                class="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                创建
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div id="toast" class="fixed bottom-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg transform translate-y-full opacity-0 transition-all duration-300">
+        <span id="toast-message"></span>
+    </div>
+
+    <script>
+        // Toast 提示功能
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            toastMessage.textContent = message;
+            toast.classList.remove('translate-y-full', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-full', 'opacity-0');
+            }, 3000);
+        }
+
+        // 移动端菜单控制
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const closeMenuButton = document.getElementById('close-menu');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const mobileMenuContent = mobileMenu.querySelector('div');
+
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.remove('hidden');
+            setTimeout(() => {
+                mobileMenuContent.classList.remove('-translate-x-full');
+            }, 10);
+        });
+
+        closeMenuButton.addEventListener('click', () => {
+            mobileMenuContent.classList.add('-translate-x-full');
+            setTimeout(() => {
+                mobileMenu.classList.add('hidden');
+            }, 300);
+        });
+
+        mobileMenu.addEventListener('click', (e) => {
+            if (e.target === mobileMenu) {
+                mobileMenuContent.classList.add('-translate-x-full');
+                setTimeout(() => {
+                    mobileMenu.classList.add('hidden');
+                }, 300);
+            }
+        });
+
+        // 上传模态框控制
+        function showUploadModal() {
+            document.getElementById('upload-modal').classList.remove('hidden');
+        }
+
+        function hideUploadModal() {
+            document.getElementById('upload-modal').classList.add('hidden');
+        }
+
+        // 新建脚本模态框控制
+        let newScriptEditor = null; // 跟踪 CodeMirror 实例
+
+        function showNewScriptModal() {
+            document.getElementById('new-script-modal').classList.remove('hidden');
+            // 稍延迟 CodeMirror 初始化以确保模态框已显示
+            setTimeout(() => {
+                if (!newScriptEditor) {
+                    newScriptEditor = CodeMirror.fromTextArea(document.getElementById('new-script-content'), {
+                        mode: 'python',
+                        theme: 'monokai',
+                        lineNumbers: true,
+                        indentUnit: 4,
+                        indentWithTabs: false,
+                        lineWrapping: true,
+                        matchBrackets: true,
+                        autoCloseBrackets: true,
+                        extraKeys: {
+                            'Tab': 'indentMore',
+                            'Shift-Tab': 'indentLess'
+                        },
+                    });
+                    // 初始化后设置固定高度
+                    newScriptEditor.setSize(null, 200); // 设置为固定高度200px
+                }
+                // 刷新编辑器以确保正确渲染
+                newScriptEditor.refresh();
+            }, 50); // 根据需要调整延迟
+        }
+
+        function hideNewScriptModal() {
+            const modal = document.getElementById('new-script-modal');
+            modal.classList.add('hidden');
+            // 可选：隐藏时销毁 CodeMirror 实例以清理资源
+            // 这也确保了下次显示时正确重新初始化
+            if (newScriptEditor) {
+                 newScriptEditor.toTextArea();
+                 newScriptEditor = null;
+                 // 可选：清除表单内容
+                 document.getElementById('new-script-form').reset();
+            }
+        }
+
+        // 脚本操作
+        function editScript(id) {
+            window.location.href = `/scripts/${id}/edit`;
+        }
+
+        async function deleteScript(id) {
+            if (confirm('确定要删除这个脚本吗？')) {
+                try {
+                    const response = await fetch(`/scripts/${id}`, {
+                        method: 'DELETE',
+                    });
+                    if (response.ok) {
+                        showToast('脚本已删除');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        showToast('删除失败');
+                    }
+                } catch (error) {
+                    showToast('删除失败');
+                }
+            }
+        }
+
+        // 表单提交处理
+        document.getElementById('upload-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            try {
+                const response = await fetch('/scripts/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+                if (response.ok) {
+                    showToast('脚本上传成功');
+                    hideUploadModal();
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showToast('上传失败');
+                }
+            } catch (error) {
+                showToast('上传失败');
+            }
+        });
+
+        // 新建脚本表单提交处理
+        document.getElementById('new-script-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+
+            // 获取 CodeMirror 的内容并覆盖 FormData 中的 content 字段
+            if (newScriptEditor) {
+                formData.set('content', newScriptEditor.getValue());
+            }
+
+            const data = Object.fromEntries(formData.entries());
+
+            try {
+                const response = await fetch('/scripts/new', {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                if (response.ok) {
+                    showToast('脚本创建成功');
+                    hideNewScriptModal();
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showToast('创建失败');
+                }
+            } catch (error) {
+                showToast('创建失败');
+            }
+        });
+    </script>
+</body>
+</html> 
