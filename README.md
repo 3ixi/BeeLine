@@ -2,6 +2,12 @@
 
 BeeLine是一个基于FastAPI的Python脚本管理平台，提供Web界面来管理Python脚本的执行、调度和监控。
 
+## 版本更新
+
+### 版本 1.0.1
+- 完善包管理功能，新增POST提交/packages路由，现可通过Web界面安装和卸载Python包。
+- 优化安装包时的提示。（后续可能考虑加入WebSocket来实时显示安装进度）
+
 ## 功能特点
 
 - 脚本管理：上传、编辑和删除Python脚本

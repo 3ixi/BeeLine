@@ -27,7 +27,7 @@ from passlib.context import CryptContext
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # 定义当前版本
-CURRENT_VERSION = "1.0.0"
+CURRENT_VERSION = "1.0.1"
 
 # 创建必要的目录
 os.makedirs("static", exist_ok=True)
@@ -433,6 +433,40 @@ async def search_packages(request: Request, search: str = "", db: SessionLocal =
     except json.JSONDecodeError as e:
         print(f"解码 pip list 输出时出错: {e}")
         return {"packages": [], "package_count": 0}
+
+@app.post("/packages")
+async def install_package(request: Request, db: SessionLocal = Depends(get_db)):
+    user = get_current_user(request, db=db)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
+
+    try:
+        data = await request.json()
+        package_name = data.get("name")
+        package_version = data.get("version")
+
+        if not package_name:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="包名不能为空")
+
+        command = ["pip", "install", package_name]
+        if package_version:
+            command.append(f"{package_name}=={package_version}")
+
+        process = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=True
+        )
+
+        return JSONResponse({"message": f"包 {package_name} 安装成功", "output": process.stdout})
+
+    except subprocess.CalledProcessError as e:
+        print(f"安装包时出错: {e.stderr}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"安装失败: {e.stderr}")
+    except Exception as e:
+        print(f"安装包时发生未知错误: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"安装失败: {e}")
 
 # 日志管理
 @app.get("/logs", response_class=HTMLResponse)
