@@ -204,12 +204,16 @@
                     </div>
                     <div class="space-y-4">
                         <div>
+                            <h4 class="text-sm font-medium text-gray-700">耗时</h4>
+                            <p id="log-duration" class="mt-1 p-2 bg-gray-50 rounded-lg text-sm text-gray-900"></p>
+                        </div>
+                        <div>
                             <h4 class="text-sm font-medium text-gray-700">输出</h4>
-                            <pre id="log-output" class="mt-1 p-4 bg-gray-50 rounded-lg text-sm font-mono overflow-x-auto"></pre>
+                            <pre id="log-output" class="mt-1 p-4 bg-gray-50 rounded-lg text-sm font-mono overflow-auto max-h-96"></pre>
                         </div>
                         <div>
                             <h4 class="text-sm font-medium text-gray-700">错误</h4>
-                            <pre id="log-error" class="mt-1 p-4 bg-gray-50 rounded-lg text-sm font-mono overflow-x-auto"></pre>
+                            <pre id="log-error" class="mt-1 p-4 bg-gray-50 rounded-lg text-sm font-mono overflow-auto max-h-96"></pre>
                         </div>
                     </div>
                 </div>
@@ -272,9 +276,42 @@
                 }
                 
                 const data = await response.json();
+                const logDurationElement = document.getElementById('log-duration');
+
+                // Calculate and display duration (handle potential null/invalid dates)
+                let durationText = '任务未完成或无时间信息';
+                if (data.started_at && data.finished_at) {
+                    try {
+                        const start = new Date(data.started_at);
+                        const end = new Date(data.finished_at);
+
+                        // Check if dates are valid
+                        if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                             const durationMs = end - start; // Duration in milliseconds
+
+                            // Convert milliseconds to a human-readable format (e.g., seconds, minutes, hours)
+                            const totalSeconds = Math.floor(durationMs / 1000);
+                            const hours = Math.floor(totalSeconds / 3600);
+                            const minutes = Math.floor((totalSeconds % 3600) / 60);
+                            const seconds = totalSeconds % 60;
+
+                            if (hours > 0) {
+                                durationText = `${hours} 小时 ${minutes} 分 ${seconds} 秒`;
+                            } else if (minutes > 0) {
+                                durationText = `${minutes} 分 ${seconds} 秒`;
+                            } else {
+                                durationText = `${totalSeconds} 秒`;
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Error parsing dates or calculating duration:", e);
+                        durationText = '计算时长失败';
+                    }
+                }
+                logDurationElement.textContent = durationText;
+                document.getElementById('log-details-modal').classList.remove('hidden');
                 document.getElementById('log-output').textContent = data.output || '无输出';
                 document.getElementById('log-error').textContent = data.error || '无错误';
-                document.getElementById('log-details-modal').classList.remove('hidden');
             } catch (error) {
                 showToast('获取日志详情失败');
             }

@@ -159,7 +159,7 @@
                                         <div class="text-sm text-gray-500">{{ script.filename }}</div>
                                     </td>
                                     <td class="px-6 py-4">
-                                        <div class="text-sm text-gray-500">{{ script.description }}</div>
+                                        <div class="text-sm text-gray-500">{{ script.description if script.description is not none else '' }}</div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm text-gray-500">{{ script.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
@@ -173,6 +173,17 @@
                                                 </button>
                                                 <span class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
                                                     编辑
+                                                    <span class="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-800 transform rotate-45 -mb-1"></span>
+                                                </span>
+                                            </div>
+
+                                            <!-- 关联文件按钮 -->
+                                            <div class="group relative">
+                                                <button onclick="showScriptFiles({{ script.id }})" class="text-green-500 hover:text-green-700">
+                                                    <i class="fas fa-paperclip"></i>
+                                                </button>
+                                                <span class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                                                    关联文件
                                                     <span class="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-800 transform rotate-45 -mb-1"></span>
                                                 </span>
                                             </div>
@@ -198,6 +209,7 @@
                                                     <span class="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-800 transform rotate-45 -mb-1"></span>
                                                 </span>
                                             </div>
+
                                         </div>
                                     </td>
                                 </tr>
@@ -237,8 +249,7 @@
                             <label for="script-description" class="block text-sm font-medium text-gray-700 mb-1">描述</label>
                             <div class="relative rounded-md shadow-sm">
                                 <textarea name="description" id="script-description" rows="3"
-                                    class="block w-full rounded-md border-gray-300 pl-3 pr-10 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition duration-150 ease-in-out resize-none"
-                                    placeholder="请输入脚本描述"></textarea>
+                                    class="block w-full rounded-md border-gray-300 pl-3 pr-10 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition duration-150 ease-in-out resize-none" placeholder="请输入脚本描述"></textarea>
                                 <div class="absolute top-2 right-2 flex items-center pr-3 pointer-events-none">
                                     <i class="fas fa-align-left text-gray-400"></i>
                                 </div>
@@ -303,8 +314,7 @@
                             <label for="new-script-description" class="block text-sm font-medium text-gray-700 mb-1">描述</label>
                             <div class="relative rounded-md shadow-sm">
                                 <textarea name="description" id="new-script-description" rows="3"
-                                    class="block w-full rounded-md border-gray-300 pl-3 pr-10 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm transition duration-150 ease-in-out resize-none"
-                                    placeholder="请输入脚本描述"></textarea>
+                                    class="block w-full rounded-md border-gray-300 pl-3 pr-10 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm transition duration-150 ease-in-out resize-none" placeholder="请输入脚本描述"></textarea>
                                 <div class="absolute top-2 right-2 flex items-center pr-3 pointer-events-none">
                                     <i class="fas fa-align-left text-gray-400"></i>
                                 </div>
@@ -322,6 +332,111 @@
                             <button type="submit"
                                 class="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
                                 创建
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 关联文件模态框 -->
+    <div id="script-files-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-medium text-gray-900">关联文件</h3>
+                        <button onclick="hideScriptFiles()" class="text-gray-400 hover:text-gray-500">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <!-- 文件上传区域 -->
+                    <div class="mb-6">
+                        <form id="upload-file-form" class="space-y-4">
+                            <input type="hidden" id="current-script-id" name="script_id">
+                            <div>
+                                <label for="file-description" class="block text-sm font-medium text-gray-700 mb-1">文件描述</label>
+                                <input type="text" id="file-description" name="description"
+                                    class="block w-full rounded-md border-gray-300 pl-3 pr-10 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition duration-150 ease-in-out"
+                                    placeholder="请输入文件描述（可选）">
+                            </div>
+                            <div class="flex items-center justify-center w-full">
+                                <div id="file-drop-area" class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors duration-150 relative">
+                                    <input id="file-upload" type="file" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" multiple />
+                                    <div class="flex flex-col items-center justify-center pt-5 pb-6 pointer-events-none">
+                                        <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+                                        <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">点击或拖拽文件到此处</span></p>
+                                        <p class="text-xs text-gray-500">支持任意格式文件</p>
+                                        <ul id="selected-file-list" class="block mt-2 text-blue-600 font-medium text-sm"></ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex justify-end">
+                                <button id="upload-file-btn" type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <span id="upload-btn-text">上传文件</span>
+                                    <span id="upload-btn-loading" class="hidden"><i class="fas fa-spinner fa-spin"></i></span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <!-- 文件列表 -->
+                    <div class="mt-6">
+                        <h4 class="text-sm font-medium text-gray-700 mb-3">已关联文件</h4>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">文件名</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">类型</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">描述</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">上传时间</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="script-files-list" class="bg-white divide-y divide-gray-200">
+                                    <!-- 文件列表将通过JavaScript动态填充 -->
+                                </tbody>
+                            </table>
+                            <div id="no-files-tip" class="text-center text-gray-400 py-6 hidden">暂无关联文件</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 文件编辑模态框 -->
+    <div id="file-edit-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-medium text-gray-900">编辑文件: <span id="edit-file-name"></span></h3>
+                        <button onclick="hideFileEditModal()" class="text-gray-400 hover:text-gray-500">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <form id="file-edit-form" class="space-y-4">
+                        <input type="hidden" id="edit-file-id">
+                        <div>
+                            <label for="edit-file-description" class="block text-sm font-medium text-gray-700 mb-1">文件描述</label>
+                            <input type="text" id="edit-file-description" name="description"
+                                class="block w-full rounded-md border-gray-300 pl-3 pr-10 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition duration-150 ease-in-out"
+                                placeholder="请输入文件描述（可选）">
+                        </div>
+                        <div>
+                            <label for="edit-file-content" class="block text-sm font-medium text-gray-700">文件内容</label>
+                            <textarea id="edit-file-content" name="content"></textarea>
+                        </div>
+                        <div class="flex justify-end space-x-3">
+                            <button type="button" onclick="hideFileEditModal()"
+                                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                取消
+                            </button>
+                            <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span id="save-file-text">保存</span>
+                                <span id="save-file-loading" class="hidden"><i class="fas fa-spinner fa-spin"></i></span>
                             </button>
                         </div>
                     </form>
@@ -486,15 +601,13 @@
                 formData.set('content', newScriptEditor.getValue());
             }
 
-            const data = Object.fromEntries(formData.entries());
+            // 直接使用 FormData 对象发送请求，浏览器会自动设置 Content-Type 为 multipart/form-data
+            const dataToSend = formData;
 
             try {
                 const response = await fetch('/scripts/new', {
                     method: 'POST',
-                    body: JSON.stringify(data),
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
+                    body: dataToSend, // 直接发送 FormData
                 });
                 if (response.ok) {
                     showToast('脚本创建成功');
@@ -507,6 +620,381 @@
                 }
             } catch (error) {
                 showToast('创建失败');
+            }
+        });
+
+        // 关联文件相关功能
+        function showScriptFiles(scriptId) {
+            document.getElementById('current-script-id').value = scriptId;
+            document.getElementById('script-files-modal').classList.remove('hidden');
+            loadScriptFiles(scriptId);
+        }
+
+        function hideScriptFiles() {
+            document.getElementById('script-files-modal').classList.add('hidden');
+            document.getElementById('upload-file-form').reset();
+            document.getElementById('selected-file-list').innerHTML = '';
+        }
+
+        async function loadScriptFiles(scriptId) {
+            try {
+                const response = await fetch(`/api/scripts/${scriptId}/files`);
+                if (!response.ok) throw new Error('获取文件列表失败');
+                const files = await response.json();
+                const filesList = document.getElementById('script-files-list');
+                const noFilesTip = document.getElementById('no-files-tip');
+                filesList.innerHTML = '';
+                if (files.length === 0) {
+                    noFilesTip.classList.remove('hidden');
+                } else {
+                    noFilesTip.classList.add('hidden');
+                    files.forEach(file => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${file.original_filename}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${file.file_type}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${file.description || '-'}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(file.created_at).toLocaleString()}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <div class="flex items-center space-x-3">
+                                    <!-- 下载按钮 -->
+                                    <div class="group relative">
+                                        <button onclick="downloadFile(${file.id})" class="text-blue-600 hover:text-blue-900">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                        <span class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                                            下载
+                                            <span class="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-800 transform rotate-45 -mb-1"></span>
+                                        </span>
+                                    </div>
+                                    <!-- 编辑按钮 -->
+                                    <div class="group relative">
+                                        <button onclick="editScriptFile(${file.id}, '${file.file_type}')" class="text-green-600 hover:text-green-900">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                         <span class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                                            编辑
+                                            <span class="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-800 transform rotate-45 -mb-1"></span>
+                                        </span>
+                                    </div>
+                                    <!-- 删除按钮 -->
+                                    <div class="group relative">
+                                        <button onclick="deleteFile(${file.id})" class="text-red-600 hover:text-red-900">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                        <span class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                                            删除
+                                            <span class="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-800 transform rotate-45 -mb-1"></span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </td>
+                        `;
+                        filesList.appendChild(row);
+                    });
+                }
+            } catch (error) {
+                showToast('获取文件列表失败');
+                console.error('Error loading script files:', error);
+            }
+        }
+
+        // 文件上传处理
+        const fileInput = document.getElementById('file-upload');
+        const fileDropArea = document.getElementById('file-drop-area');
+        const selectedFileList = document.getElementById('selected-file-list');
+        const uploadBtn = document.getElementById('upload-file-btn');
+        const uploadBtnText = document.getElementById('upload-btn-text');
+        const uploadBtnLoading = document.getElementById('upload-btn-loading');
+
+        // 拖拽高亮
+        fileDropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileDropArea.classList.add('border-blue-500', 'bg-blue-50');
+        });
+        fileDropArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            fileDropArea.classList.remove('border-blue-500', 'bg-blue-50');
+        });
+        fileDropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileDropArea.classList.remove('border-blue-500', 'bg-blue-50');
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                displaySelectedFiles(fileInput.files);
+            }
+        });
+        // 选择文件后显示文件名
+        fileInput.addEventListener('change', (e) => {
+            if (fileInput.files.length) {
+                displaySelectedFiles(fileInput.files);
+            } else {
+                selectedFileList.innerHTML = '';
+            }
+        });
+
+        // 显示选中的文件列表
+        function displaySelectedFiles(files) {
+            selectedFileList.innerHTML = ''; // 清空现有列表
+            if (files.length > 0) {
+                for (let i = 0; i < files.length; i++) {
+                    const li = document.createElement('li');
+                    li.textContent = files[i].name;
+                    selectedFileList.appendChild(li);
+                }
+            }
+        }
+
+        document.getElementById('upload-file-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const scriptId = document.getElementById('current-script-id').value;
+            const description = document.getElementById('file-description').value;
+            if (!fileInput.files.length) {
+                showToast('请选择要上传的文件');
+                return;
+            }
+
+            const formData = new FormData();
+            // 遍历所有选中的文件并添加到 FormData
+            for (let i = 0; i < fileInput.files.length; i++) {
+                formData.append('files', fileInput.files[i]);
+            }
+            formData.append('description', description);
+
+            // 按钮loading
+            uploadBtn.disabled = true;
+            uploadBtnText.classList.add('hidden');
+            uploadBtnLoading.classList.remove('hidden');
+            try {
+                const response = await fetch(`/api/scripts/${scriptId}/files`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!response.ok) throw new Error('上传失败');
+                // 解析后端返回的JSON响应
+                const result = await response.json();
+
+                if (result.failed && result.failed.length > 0) {
+                    // 有文件上传失败
+                    let message = '部分文件上传失败：';
+                    result.failed.forEach(item => {
+                        message += `${item.original_filename} (${item.error}) `;
+                    });
+                    if (result.uploaded && result.uploaded.length > 0) {
+                         message = `部分文件上传成功 (${result.uploaded.length} 个)，失败 (${result.failed.length} 个)：` + result.failed.map(item => `${item.original_filename} (${item.error})`).join(', ');
+                    } else {
+                         message = '所有文件上传失败：' + result.failed.map(item => `${item.original_filename} (${item.error})`).join(', ');
+                    }
+                    showToast(message);
+                    // 即使部分失败，也要刷新文件列表以显示成功上传的文件
+                    loadScriptFiles(scriptId);
+                } else if (result.uploaded && result.uploaded.length > 0) {
+                    // 所有文件上传成功
+                    showToast(result.message || '文件上传成功');
+                    loadScriptFiles(scriptId); // 刷新文件列表
+                } else {
+                    // 没有上传任何文件或者其他情况
+                     showToast(result.message || '未知上传结果');
+                }
+
+                // 不论成功或失败，都重置表单并清空文件列表显示
+                document.getElementById('upload-file-form').reset();
+                selectedFileList.innerHTML = '';
+            } catch (error) {
+                showToast('文件上传失败');
+                console.error('Error uploading file:', error);
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtnText.classList.remove('hidden');
+                uploadBtnLoading.classList.add('hidden');
+            }
+        });
+
+        async function downloadFile(fileId) {
+            try {
+                const response = await fetch(`/api/script-files/${fileId}/download`);
+                if (!response.ok) throw new Error('下载失败');
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = response.headers.get('Content-Disposition').split('filename=')[1].replace(/"/g, '');
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+            } catch (error) {
+                showToast('文件下载失败');
+                console.error('Error downloading file:', error);
+            }
+        }
+
+        async function deleteFile(fileId) {
+            if (!confirm('确定要删除这个文件吗？')) return;
+
+            try {
+                const response = await fetch(`/api/script-files/${fileId}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error('删除失败');
+                
+                showToast('文件删除成功');
+                const scriptId = document.getElementById('current-script-id').value;
+                loadScriptFiles(scriptId);
+            } catch (error) {
+                showToast('文件删除失败');
+                console.error('Error deleting file:', error);
+            }
+        }
+
+        // 文件编辑相关功能
+        let fileEditor = null; // CodeMirror 实例
+        const supportedTextTypes = ['txt', 'json', 'yaml', 'yml', 'xml', 'csv', 'log', 'md', 'py', 'js', 'html', 'css', 'cfg', 'conf', 'ini']; // 支持编辑的文本文件类型列表
+
+        async function editScriptFile(fileId, fileType) {
+            // 检查文件类型是否支持编辑
+            if (!supportedTextTypes.includes(fileType.toLowerCase())) {
+                showToast(`文件类型 '.${fileType}' 不支持在线编辑`);
+                return;
+            }
+
+            // 获取文件详情和内容
+            try {
+                const response = await fetch(`/api/script-files/${fileId}`); // 需要一个API来获取文件详情，或者直接使用loadScriptFiles获取的数据
+                if (!response.ok) throw new Error('获取文件详情失败');
+                const fileDetails = await response.json(); // 假设这个API返回文件的所有详情，包括description
+
+                const contentResponse = await fetch(`/api/script-files/${fileId}/content`);
+                if (!contentResponse.ok) {
+                    // 如果获取内容失败，可能是非文本文件或者其他后端错误
+                     showToast(`文件类型 '.${fileType}' 不支持在线编辑或读取失败`);
+                     return;
+                }
+                 const fileContent = await contentResponse.text();
+
+                let processedContent = fileContent;
+
+                // 尝试去除最外层的引号并解析JSON字符串
+                try {
+                    // 检查是否以引号开头和结尾
+                    if (processedContent.startsWith('"') && processedContent.endsWith('"')) {
+                        // 去除最外层的引号
+                        processedContent = processedContent.substring(1, processedContent.length - 1);
+                    }
+                    // 使用 JSON.parse() 解析字符串，这将处理内部的转义字符
+                    processedContent = JSON.parse(`"${processedContent}"`); // 将处理后的字符串再次包裹在引号中进行JSON解析，确保内部转义正确处理
+
+                } catch (e) {
+                    console.error("Failed to parse JSON string:", e);
+                    // 如果解析失败，回退到原始内容或者之前的处理方式
+                    // processedContent = fileContent.replace(/\\n/g, '\n'); // 可以选择保留上一步的换行处理
+                    processedContent = fileContent; // 或者直接使用原始内容，如果不是有效的JSON字符串
+                }
+
+                // 填充模态框并显示
+                document.getElementById('edit-file-id').value = fileId;
+                document.getElementById('edit-file-name').textContent = fileDetails.original_filename; // 使用原始文件名显示
+                document.getElementById('edit-file-description').value = fileDetails.description || '';
+
+                if (!fileEditor) {
+                     fileEditor = CodeMirror.fromTextArea(document.getElementById('edit-file-content'), {
+                         mode: getCodeMirrorMode(fileType), // 根据文件类型设置CodeMirror模式
+                         theme: 'monokai',
+                         lineNumbers: true,
+                         indentUnit: 4,
+                         indentWithTabs: false,
+                         lineWrapping: true,
+                         matchBrackets: true,
+                         autoCloseBrackets: true,
+                     });
+                     fileEditor.setSize(null, 400); // 设置编辑器固定高度
+                 } else {
+                     fileEditor.setOption('mode', getCodeMirrorMode(fileType)); // 更新模式
+                 }
+                 // 无论是否新建，都在此处设置内容
+                 fileEditor.setValue(processedContent); // 使用处理后的内容
+                 fileEditor.refresh(); // 在设置内容后立即刷新
+
+                document.getElementById('file-edit-modal').classList.remove('hidden');
+                fileEditor.refresh(); // 在模态框显示后刷新编辑器
+
+            } catch (error) {
+                showToast('加载文件进行编辑失败');
+                console.error('Error loading file for edit:', error);
+            }
+        }
+
+        function hideFileEditModal() {
+             document.getElementById('file-edit-modal').classList.add('hidden');
+             // 可选：清空表单和编辑器内容
+             document.getElementById('file-edit-form').reset();
+             if (fileEditor) {
+                 fileEditor.setValue('');
+             }
+        }
+
+        // 根据文件类型获取CodeMirror模式
+        function getCodeMirrorMode(fileType) {
+            switch (fileType.toLowerCase()) {
+                case 'json': return 'application/json';
+                case 'yaml':
+                case 'yml': return 'text/x-yaml';
+                case 'xml': return 'application/xml';
+                case 'html': return 'text/html';
+                case 'css': return 'text/css';
+                case 'js': return 'text/javascript';
+                case 'py': return 'text/x-python';
+                case 'md': return 'text/x-markdown';
+                default: return null; // 默认纯文本模式
+            }
+        }
+
+        // 文件编辑保存处理
+        document.getElementById('file-edit-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fileId = document.getElementById('edit-file-id').value;
+            const description = document.getElementById('edit-file-description').value;
+            const content = fileEditor ? fileEditor.getValue() : document.getElementById('edit-file-content').value;
+
+            const saveBtn = document.querySelector('#file-edit-form button[type="submit"]');
+            const saveBtnText = document.getElementById('save-file-text');
+            const saveBtnLoading = document.getElementById('save-file-loading');
+
+            // 按钮loading
+            saveBtn.disabled = true;
+            saveBtnText.classList.add('hidden');
+            saveBtnLoading.classList.remove('hidden');
+
+            try {
+                const response = await fetch(`/api/script-files/${fileId}`, {
+                    method: 'PUT', // 使用 PUT 方法更新资源
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        description: description,
+                        content: content
+                    })
+                });
+
+                if (!response.ok) throw new Error('保存文件失败');
+
+                const result = await response.json();
+                showToast(result.message || '文件保存成功');
+                hideFileEditModal();
+                // 刷新关联文件列表以显示更新后的描述
+                const currentScriptId = document.getElementById('current-script-id').value;
+                loadScriptFiles(currentScriptId);
+
+            } catch (error) {
+                showToast('保存文件失败');
+                console.error('Error saving file:', error);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtnText.classList.remove('hidden');
+                saveBtnLoading.classList.add('hidden');
             }
         });
     </script>
