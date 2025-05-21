@@ -149,7 +149,17 @@
                                             <span class="text-sm font-medium text-gray-900">{{ task.name }}</span>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ task.script.name }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <div class="flex items-center">
+                                            {% if task.script.exists %}
+                                                <i class="fab fa-python text-green-500 mr-2"></i>
+                                                <span class="text-gray-500">{{ task.script.name }}</span>
+                                            {% else %}
+                                                <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>
+                                                <span class="text-red-500">{{ task.script.name }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ task.cron_expression }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         <!-- 切换开关 -->
