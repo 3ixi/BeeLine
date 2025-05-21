@@ -248,24 +248,34 @@
                 tbody.innerHTML = '';
                 tbody.appendChild(loadingRow);
                 
-                data.packages.forEach(package => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex items-center">
-                                <i class="fas fa-box text-blue-600 mr-2"></i>
-                                <span class="text-sm font-medium text-gray-900">${package.name}</span>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${package.version}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button onclick="uninstallPackage('${package.name}')" class="text-red-600 hover:text-red-900">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                if (data.packages.length === 0) {
+                    const noResultsRow = document.createElement('tr');
+                    noResultsRow.innerHTML = `
+                        <td colspan="3" class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
+                            未找到匹配的包
                         </td>
                     `;
-                    tbody.appendChild(tr);
-                });
+                    tbody.appendChild(noResultsRow);
+                } else {
+                    data.packages.forEach(package => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <i class="fas fa-box text-blue-600 mr-2"></i>
+                                    <span class="text-sm font-medium text-gray-900">${package.name}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${package.version}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button onclick="uninstallPackage('${package.name}')" class="text-red-600 hover:text-red-900">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
             } catch (error) {
                 console.error('加载包列表失败:', error);
                 showToast('加载包列表失败');
@@ -368,6 +378,17 @@
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
 
+            const submitButton = e.target.querySelector('button[type="submit"]');
+            
+            // 立即提示用户并禁用按钮
+            showToast('已提交安装请求...');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = '安装中...';
+                // 可以选择添加加载指示，例如改变颜色或显示 spinner
+                // submitButton.classList.add('...'); 
+            }
+
             try {
                 const response = await fetch('/packages', {
                     method: 'POST',
@@ -388,6 +409,13 @@
                 }
             } catch (error) {
                 showToast('安装失败');
+            } finally {
+                // 无论成功或失败，恢复按钮状态
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.textContent = '安装';
+                    // submitButton.classList.remove('...');
+                }
             }
         });
     </script>
