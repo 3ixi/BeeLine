@@ -27,7 +27,7 @@ from passlib.context import CryptContext
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # 定义当前版本
-CURRENT_VERSION = "1.0.1"
+CURRENT_VERSION = "1.0.2"
 
 # 创建必要的目录
 os.makedirs("static", exist_ok=True)
@@ -954,11 +954,12 @@ async def run_task(
             subprocess_env.update(env_vars)
 
             process = subprocess.Popen(
-                ["python", script_path],
+                ["python", script_thread.filename],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                env=subprocess_env # 传递正确更新的环境变量
+                env=subprocess_env, # 传递正确更新的环境变量
+                cwd="scripts" # 在子进程中设置工作目录
             )
             stdout, stderr = process.communicate()
 
