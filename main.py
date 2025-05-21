@@ -27,7 +27,7 @@ from passlib.context import CryptContext
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # 定义当前版本
-CURRENT_VERSION = "1.0.2"
+CURRENT_VERSION = "1.0.3"
 
 # 创建必要的目录
 os.makedirs("static", exist_ok=True)
@@ -688,6 +688,16 @@ async def delete_script(script_id: int, request: Request, db: SessionLocal = Dep
     if not script:
         raise HTTPException(status_code=404, detail="脚本不存在")
 
+    # 删除关联的任务
+    tasks = db.query(Task).filter(Task.script_id == script_id).all()
+    for task in tasks:
+        # 从调度器中移除任务
+        remove_job(task.id)
+        # 删除任务的日志
+        db.query(TaskLog).filter(TaskLog.task_id == task.id).delete()
+        # 删除任务
+        db.delete(task)
+
     # 删除文件
     file_path = os.path.join("scripts", script.filename)
     if os.path.exists(file_path):
@@ -737,15 +747,29 @@ async def list_tasks(request: Request, db: SessionLocal = Depends(get_db)):
                 print(f"计算任务 {task.id} 的下次运行时间时出错: {e}")
                 next_run = '计算失败'
 
+        # 检查脚本是否存在
+        script_name = "未知脚本"
+        script_exists = False
+        if task.script:
+            script_name = task.script.name
+            script_exists = True
+        else:
+            # 如果脚本不存在，将任务标记为非活动状态
+            task.is_active = False
+            db.commit()
+
         tasks_data.append({
             "id": task.id,
             "name": task.name,
             "description": task.description,
-            "script": {"name": task.script.name}, # 包含脚本名称
+            "script": {
+                "name": script_name,
+                "exists": script_exists
+            },
             "cron_expression": task.cron_expression,
             "is_active": task.is_active,
             "last_run_at": task.last_run_at,
-            "next_run_at": next_run # 添加计算的下次运行时间
+            "next_run_at": next_run
         })
 
     scripts = db.query(Script).all()
