@@ -22,7 +22,21 @@ class Script(Base):
     filename = Column(String(255), nullable=False)
     description = Column(Text)
     created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    files = relationship("ScriptFile", back_populates="script", cascade="all, delete-orphan")
     tasks = relationship("Task", back_populates="script")
+
+class ScriptFile(Base):
+    __tablename__ = "script_files"
+
+    id = Column(Integer, primary_key=True, index=True)
+    script_id = Column(Integer, ForeignKey("scripts.id", ondelete="CASCADE"))
+    filename = Column(String)
+    original_filename = Column(String)  # 原始文件名
+    file_type = Column(String)  # 文件类型/扩展名
+    description = Column(String, nullable=True)  # 可选的描述
+    created_at = Column(DateTime, default=datetime.now)
+    script = relationship("Script", back_populates="files")
 
 class Task(Base):
     __tablename__ = "tasks"

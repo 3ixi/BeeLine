@@ -10,7 +10,7 @@ from typing import Optional, List
 import secrets
 from pathlib import Path
 import shutil
-from models import SessionLocal, Script, Task, TaskLog, User, EnvironmentVariable, Session
+from models import SessionLocal, Script, Task, TaskLog, User, EnvironmentVariable, Session, ScriptFile
 import sqlalchemy as sa
 import subprocess
 import threading
@@ -27,12 +27,13 @@ from passlib.context import CryptContext
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # 定义当前版本
-CURRENT_VERSION = "1.0.3"
+CURRENT_VERSION = "1.0.5"
 
 # 创建必要的目录
 os.makedirs("static", exist_ok=True)
 os.makedirs("templates", exist_ok=True)
 os.makedirs("scripts", exist_ok=True)
+os.makedirs("script_files", exist_ok=True)  # 新增：用于存储脚本关联文件
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -513,7 +514,9 @@ async def get_log_details(log_id: int, request: Request, db: SessionLocal = Depe
 
         return {
             "output": log.output,
-            "error": log.error
+            "error": log.error,
+            "started_at": log.started_at.isoformat() if log.started_at else None,
+            "finished_at": log.finished_at.isoformat() if log.finished_at else None,
         }
     finally:
         db.close()
@@ -552,9 +555,9 @@ async def list_scripts(request: Request, db: SessionLocal = Depends(get_db)):
 async def upload_script(
     request: Request,
     name: Annotated[str, Form(...)],
-    description: Annotated[str, Form(...)],
     file: Annotated[UploadFile, File(...)],
-    db: Annotated[SessionLocal, Depends(get_db)]
+    db: Annotated[SessionLocal, Depends(get_db)],
+    description: Annotated[Optional[str], Form()] = None,
 ):
     user = get_current_user(request, db=db)
     if not user:
@@ -645,7 +648,7 @@ async def create_script(
     request: Request,
     name: str = Form(...),
     filename: str = Form(...),
-    description: str = Form(...),
+    description: Annotated[Optional[str], Form()] = None,
     content: str = Form(...),
     db: SessionLocal = Depends(get_db)
 ):
@@ -682,7 +685,7 @@ async def create_script(
 async def delete_script(script_id: int, request: Request, db: SessionLocal = Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
 
     script = db.query(Script).filter(Script.id == script_id).first()
     if not script:
@@ -697,6 +700,25 @@ async def delete_script(script_id: int, request: Request, db: SessionLocal = Dep
         db.query(TaskLog).filter(TaskLog.task_id == task.id).delete()
         # 删除任务
         db.delete(task)
+
+    # 删除关联的文件
+    associated_files = db.query(ScriptFile).filter(ScriptFile.script_id == script_id).all()
+    print(f"尝试删除脚本 ID 为 {script_id} 的{len(associated_files)} 个关联文件")
+    for associated_file in associated_files:
+        file_path = os.path.join("scripts", associated_file.filename)
+        print(f"检查文件路径: {file_path}")
+        if os.path.exists(file_path):
+            print(f"文件存在: {file_path}. 尝试删除。")
+            try:
+                os.remove(file_path)
+                print(f"已删除关联文件: {file_path}")
+            except Exception as e:
+                print(f"删除关联文件时出错: {file_path}: {e}")
+        else:
+            print(f"文件不存在: {file_path}")
+    print(f"已尝试删除脚本 ID 为 {script_id} 的关联文件")
+    # 删除关联文件记录从数据库中
+    db.query(ScriptFile).filter(ScriptFile.script_id == script_id).delete()
 
     # 删除文件
     file_path = os.path.join("scripts", script.filename)
@@ -724,6 +746,233 @@ async def export_script(script_id: int, request: Request, db: SessionLocal = Dep
         raise HTTPException(status_code=404, detail="脚本文件不存在")
 
     return FileResponse(path=file_path, filename=script.filename, media_type="text/plain")
+
+# 脚本关联文件相关路由
+@app.get("/api/scripts/{script_id}/files")
+async def list_script_files(script_id: int, request: Request, db: SessionLocal = Depends(get_db)):
+    user = get_current_user(request, db=db)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
+
+    # 验证脚本是否存在
+    script = db.query(Script).filter(Script.id == script_id).first()
+    if not script:
+        raise HTTPException(status_code=404, detail="脚本不存在")
+
+    # 获取脚本的所有关联文件
+    files = db.query(ScriptFile).filter(ScriptFile.script_id == script_id).all()
+    return files
+
+@app.post("/api/scripts/{script_id}/files")
+async def upload_script_file(
+    script_id: int,
+    files: List[UploadFile] = File(...), # 修改为接收文件列表
+    description: Optional[str] = Form(None),
+    request: Request = Request,
+    db: SessionLocal = Depends(get_db)
+):
+    user = get_current_user(request, db=db)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
+
+    # 验证脚本是否存在并获取脚本信息 (仍然需要用于数据库关联)
+    script = db.query(Script).filter(Script.id == script_id).first()
+    if not script:
+        raise HTTPException(status_code=404, detail="脚本不存在")
+
+    # 确保 /scripts 目录存在
+    os.makedirs("scripts", exist_ok=True)
+
+    uploaded_files_info = []
+    failed_files = []
+
+    if len(files) > 10:
+        raise HTTPException(status_code=400, detail="一次最多上传 10 个文件")
+
+    for file in files:
+        try:
+            # 使用原始文件名构建文件路径
+            file_path = os.path.join("scripts", file.filename)
+
+            # 检查文件是否已存在
+            if os.path.exists(file_path):
+                failed_files.append({"original_filename": file.filename, "error": "文件已存在"})
+                continue  # 跳过此文件，继续处理下一个
+
+            # 保存文件
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+
+            # 提取文件类型
+            file_extension = os.path.splitext(file.filename)[1]
+
+            # 创建数据库记录
+            script_file = ScriptFile(
+                script_id=script_id,
+                # 在数据库中保存原始文件名
+                filename=file.filename, # 这里存储原始文件名
+                original_filename=file.filename, # 这里存储原始文件名
+                file_type=file_extension[1:] if file_extension else "unknown",
+                description=description # 同一个描述应用于所有文件，或者前端可以提供单独的描述字段
+            )
+            db.add(script_file)
+            db.commit()
+            db.refresh(script_file)
+
+            uploaded_files_info.append({"original_filename": file.filename, "file_id": script_file.id})
+        except Exception as e:
+            # 如果单个文件上传失败，记录错误并继续处理其他文件
+            failed_files.append({"original_filename": file.filename, "error": str(e)})
+            # 回滚当前文件的数据库操作（如果已经开始）
+            db.rollback()
+
+    if failed_files:
+        # 如果有文件上传失败，返回部分成功和失败信息
+        # 返回 200 OK 并附带详细信息，以便前端区分处理成功和失败的文件
+        return JSONResponse({
+            "message": "部分文件上传失败",
+            "uploaded": uploaded_files_info,
+            "failed": failed_files
+        })
+    else:
+        # 所有文件上传成功
+        return JSONResponse({"message": "所有文件上传成功", "uploaded": uploaded_files_info})
+
+@app.get("/api/script-files/{file_id}")
+async def get_script_file_details(file_id: int, request: Request, db: SessionLocal = Depends(get_db)):
+    user = get_current_user(request, db=db)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
+
+    script_file = db.query(ScriptFile).filter(ScriptFile.id == file_id).first()
+    if not script_file:
+        raise HTTPException(status_code=404, detail="文件不存在")
+
+    return {
+        "id": script_file.id,
+        "script_id": script_file.script_id,
+        "filename": script_file.filename, # 内部文件名
+        "original_filename": script_file.original_filename, # 原始文件名
+        "file_type": script_file.file_type,
+        "description": script_file.description,
+        "created_at": script_file.created_at.strftime('%Y-%m-%d %H:%M:%S') if script_file.created_at else None
+    }
+
+@app.get("/api/script-files/{file_id}/content")
+async def get_script_file_content(file_id: int, request: Request, db: SessionLocal = Depends(get_db)):
+    user = get_current_user(request, db=db)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
+
+    script_file = db.query(ScriptFile).filter(ScriptFile.id == file_id).first()
+    if not script_file:
+        raise HTTPException(status_code=404, detail="文件不存在")
+
+    file_path = os.path.join(
+        "scripts", script_file.filename # 直接在 scripts 目录下
+    )
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="文件不存在")
+
+    try:
+        # 尝试以文本模式读取文件内容
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        return content
+    except Exception as e:
+        # 如果读取失败（例如，非文本文件），返回错误
+        raise HTTPException(status_code=400, detail=f"无法读取文件内容，可能不是文本文件或编码错误: {str(e)}")
+
+# 定义用于更新文件的请求体模型
+from pydantic import BaseModel
+
+class UpdateScriptFileRequest(BaseModel):
+    description: Optional[str] = None
+    content: Optional[str] = None # 只在编辑文本文件时提供
+
+@app.put("/api/script-files/{file_id}")
+async def update_script_file(
+    file_id: int,
+    request_body: UpdateScriptFileRequest,
+    request: Request,
+    db: SessionLocal = Depends(get_db)
+):
+    user = get_current_user(request, db=db)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
+
+    script_file = db.query(ScriptFile).filter(ScriptFile.id == file_id).first()
+    if not script_file:
+        raise HTTPException(status_code=404, detail="文件不存在")
+
+    # 更新描述
+    if request_body.description is not None:
+        script_file.description = request_body.description
+
+    # 如果提供了内容，则更新文件内容
+    if request_body.content is not None:
+        file_path = os.path.join("scripts", script_file.filename) # 直接在 scripts 目录下
+        if not os.path.exists(file_path):
+             raise HTTPException(status_code=404, detail="文件不存在")
+
+        try:
+            # 尝试以文本模式写入文件内容
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(request_body.content)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"保存文件内容失败: {str(e)}")
+
+    db.commit()
+
+    return JSONResponse({"message": "文件更新成功"})
+
+@app.get("/api/script-files/{file_id}/download")
+async def download_script_file(file_id: int, request: Request, db: SessionLocal = Depends(get_db)):
+    user = get_current_user(request, db=db)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
+
+    # 获取文件信息
+    script_file = db.query(ScriptFile).filter(ScriptFile.id == file_id).first()
+    if not script_file:
+        raise HTTPException(status_code=404, detail="文件不存在")
+
+    file_path = os.path.join(
+        "scripts", script_file.filename # 直接在 scripts 目录下
+    )
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="文件不存在")
+
+    return FileResponse(
+        path=file_path,
+        filename=script_file.original_filename,
+        media_type="application/octet-stream"
+    )
+
+@app.delete("/api/script-files/{file_id}")
+async def delete_script_file(file_id: int, request: Request, db: SessionLocal = Depends(get_db)):
+    user = get_current_user(request, db=db)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
+
+    # 获取文件信息
+    script_file = db.query(ScriptFile).filter(ScriptFile.id == file_id).first()
+    if not script_file:
+        raise HTTPException(status_code=404, detail="文件不存在")
+
+    try:
+        # 删除物理文件
+        file_path = os.path.join("scripts", script_file.filename) # 直接在 scripts 目录下
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+        # 删除数据库记录
+        db.delete(script_file)
+        db.commit()
+
+        return JSONResponse({"message": "文件删除成功"})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"文件删除失败: {str(e)}")
 
 # 任务调度相关路由
 @app.get("/tasks", response_class=HTMLResponse)
@@ -1013,7 +1262,7 @@ async def run_task(
                 log_to_update.error = str(e)
                 log_to_update.finished_at = datetime.now()
                 db_thread.commit()
-            print(f"Error running task {task_id}: {e}")
+            print(f"任务运行错误 {task_id}: {e}")
         finally:
             db_thread.close()
             running_tasks.pop(task_id, None)
