@@ -58,7 +58,7 @@ git clone https://github.com/3iXi/beeline.git
      f. **完成安装**  
         - 点击"Install"按钮等待安装完成
         - 安装完成后可在CMD命令提示符中验证：  
-          ```bash
+          ```
           python --version
           ```
 
