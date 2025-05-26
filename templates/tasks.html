@@ -248,12 +248,16 @@
                     </div>
                     <div class="space-y-4">
                         <div>
+                            <h4 class="text-sm font-medium text-gray-700">耗时</h4>
+                            <p id="task-log-duration" class="mt-1 p-2 bg-gray-50 rounded-lg text-sm text-gray-900"></p>
+                        </div>
+                        <div>
                             <h4 class="text-sm font-medium text-gray-700">输出</h4>
-                            <pre id="task-log-output" class="mt-1 p-4 bg-gray-50 rounded-lg text-sm font-mono overflow-x-auto"></pre>
+                            <pre id="task-log-output" class="mt-1 p-4 bg-gray-50 rounded-lg text-sm font-mono overflow-x-auto max-h-96"></pre>
                         </div>
                         <div>
                             <h4 class="text-sm font-medium text-gray-700">错误</h4>
-                            <pre id="task-log-error" class="mt-1 p-4 bg-gray-50 rounded-lg text-sm font-mono overflow-x-auto"></pre>
+                            <pre id="task-log-error" class="mt-1 p-4 bg-gray-50 rounded-lg text-sm font-mono overflow-x-auto max-h-96"></pre>
                         </div>
                     </div>
                 </div>
@@ -305,15 +309,20 @@
                             </select>
                         </div>
                         <div>
-                            <label for="task-cron" class="block text-sm font-medium text-gray-700 mb-1">Cron 表达式</label>
-                            <div class="relative rounded-md shadow-sm">
-                                <input type="text" name="cron_expression" id="task-cron" required placeholder="0 0 * * *"
-                                    class="block w-full rounded-md border-gray-300 pl-3 pr-10 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition duration-150 ease-in-out">
-                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                     <i class="fas fa-clock-rotate-left text-gray-400"></i>
+                            <label for="task-cron" class="block text-sm font-medium text-gray-700 mb-1">Cron表达式</label>
+                            <div class="flex space-x-2">
+                                <div class="relative rounded-md shadow-sm flex-1">
+                                    <input type="text" name="cron_expression" id="task-cron" required placeholder="0 0 * * *"
+                                        class="block w-full rounded-md border-gray-300 pl-3 pr-10 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition duration-150 ease-in-out">
+                                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                         <i class="fas fa-clock-rotate-left text-gray-400"></i>
+                                    </div>
                                 </div>
+                                <button type="button" onclick="showCronGeneratorModal()"
+                                    class="px-3 py-2 bg-gray-200 text-gray-800 rounded-md text-sm hover:bg-gray-300 transition-colors duration-200 whitespace-nowrap">
+                                    生成Cron表达式
+                                </button>
                             </div>
-                            <p class="mt-1 text-sm text-gray-500">例如：0 0 * * * 表示每天0点运行</p>
                         </div>
                         <div class="flex justify-end space-x-3">
                             <button type="button" onclick="hideCreateTaskModal()"
@@ -375,12 +384,18 @@
                         </div>
                         <div>
                             <label for="edit-task-cron" class="block text-sm font-medium text-gray-700 mb-1">Cron 表达式</label>
-                            <div class="relative rounded-md shadow-sm">
-                                <input type="text" name="cron_expression" id="edit-task-cron" required placeholder="0 0 * * *"
-                                    class="block w-full rounded-md border-gray-300 pl-3 pr-10 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition duration-150 ease-in-out">
-                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                     <i class="fas fa-clock-rotate-left text-gray-400"></i>
+                            <div class="flex space-x-2">
+                                <div class="relative rounded-md shadow-sm flex-1">
+                                    <input type="text" name="cron_expression" id="edit-task-cron" required placeholder="0 0 * * *"
+                                        class="block w-full rounded-md border-gray-300 pl-3 pr-10 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition duration-150 ease-in-out">
+                                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                         <i class="fas fa-clock-rotate-left text-gray-400"></i>
+                                    </div>
                                 </div>
+                                <button type="button" onclick="showCronGeneratorModal()"
+                                    class="px-3 py-2 bg-gray-200 text-gray-800 rounded-md text-sm hover:bg-gray-300 transition-colors duration-200 whitespace-nowrap">
+                                    生成 Cron 表达式
+                                </button>
                             </div>
                             <p class="mt-1 text-sm text-gray-500">例如：0 0 * * * 表示每天0点运行</p>
                         </div>
@@ -403,6 +418,80 @@
     <!-- Toast 提示 -->
     <div id="toast" class="fixed bottom-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg transform translate-y-full opacity-0 transition-all duration-300">
         <span id="toast-message"></span>
+    </div>
+
+    <!-- Cron 表达式生成器模态框 -->
+    <div id="cron-generator-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-medium text-gray-900">Cron表达式生成器</h3>
+                        <button onclick="hideCronGeneratorModal()" class="text-gray-400 hover:text-gray-500">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="cron-minute" class="block text-sm font-medium text-gray-700 mb-1">分钟</label>
+                            <select id="cron-minute" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                                <option value="*">* (每分钟)</option>
+                                {% for i in range(60) %}
+                                <option value="{{ i }}">{{ i }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="cron-hour" class="block text-sm font-medium text-gray-700 mb-1">小时</label>
+                            <select id="cron-hour" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                                 <option value="*">* (每小时)</option>
+                                 {% for i in range(24) %}
+                                <option value="{{ i }}">{{ i }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="cron-day" class="block text-sm font-medium text-gray-700 mb-1">日期</label>
+                            <select id="cron-day" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                                 <option value="*">* (每天)</option>
+                                 {% for i in range(1, 32) %}
+                                <option value="{{ i }}">{{ i }}</option>
+                                {% endfor %}
+                                <option value="?">? (不指定,由星期决定)</option>
+                                <option value="L">L (最后一天)</option>
+                                <option value="W">W (最近的工作日)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="cron-month" class="block text-sm font-medium text-gray-700 mb-1">月份</label>
+                            <select id="cron-month" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                                 <option value="*">* (每月)</option>
+                                 {% for i in range(1, 13) %}
+                                <option value="{{ i }}">{{ i }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="cron-day-of-week" class="block text-sm font-medium text-gray-700 mb-1">星期</label>
+                            <select id="cron-day-of-week" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                                 <option value="*">* (每周)</option>
+                                 {% for i in range(7) %}
+                                <option value="{{ i }}">{{ i }} (星期{{ ['日', '一', '二', '三', '四', '五', '六'][i] }})</option>
+                                {% endfor %}
+                                 <option value="?">? (不指定,由天决定)</option>
+                                 <option value="L">L (最后一天)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-end space-x-3">
+                        <button type="button" onclick="applyCronExpression()"
+                            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            应用 Cron 表达式
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -666,6 +755,39 @@
                 }
                 
                 const data = await response.json();
+                const logDurationElement = document.getElementById('task-log-duration');
+
+                // Calculate and display duration (handle potential null/invalid dates)
+                let durationText = '任务未完成或无时间信息';
+                if (data.started_at && data.finished_at) {
+                    try {
+                        const start = new Date(data.started_at);
+                        const end = new Date(data.finished_at);
+
+                        // Check if dates are valid
+                        if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                             const durationMs = end - start; // Duration in milliseconds
+
+                            // Convert milliseconds to a human-readable format (e.g., seconds, minutes, hours)
+                            const totalSeconds = Math.floor(durationMs / 1000);
+                            const hours = Math.floor(totalSeconds / 3600);
+                            const minutes = Math.floor((totalSeconds % 3600) / 60);
+                            const seconds = totalSeconds % 60;
+
+                            if (hours > 0) {
+                                durationText = `${hours} 小时 ${minutes} 分 ${seconds} 秒`;
+                            } else if (minutes > 0) {
+                                durationText = `${minutes} 分 ${seconds} 秒`;
+                            } else {
+                                durationText = `${totalSeconds} 秒`;
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Error parsing dates or calculating duration:", e);
+                        durationText = '计算时长失败';
+                    }
+                }
+                logDurationElement.textContent = durationText;
                 document.getElementById('task-log-output').textContent = data.output || '无输出';
                 document.getElementById('task-log-error').textContent = data.error || '无错误';
                 document.getElementById('task-log-modal').classList.remove('hidden');
@@ -676,6 +798,44 @@
 
         function hideTaskLog() {
             document.getElementById('task-log-modal').classList.add('hidden');
+        }
+
+        // Cron 表达式生成器模态框控制
+        function showCronGeneratorModal() {
+            document.getElementById('cron-generator-modal').classList.remove('hidden');
+            // Optional: Pre-fill generator fields from current cron input
+            const currentCron = document.getElementById('task-cron').value.split(' ');
+            if (currentCron.length === 5) {
+                document.getElementById('cron-minute').value = currentCron[0];
+                document.getElementById('cron-hour').value = currentCron[1];
+                document.getElementById('cron-day').value = currentCron[2];
+                document.getElementById('cron-month').value = currentCron[3];
+                document.getElementById('cron-day-of-week').value = currentCron[4];
+            }
+        }
+
+        function hideCronGeneratorModal() {
+            document.getElementById('cron-generator-modal').classList.add('hidden');
+        }
+
+        // 应用生成的 Cron 表达式
+        function applyCronExpression() {
+            const minute = document.getElementById('cron-minute').value;
+            const hour = document.getElementById('cron-hour').value;
+            const day = document.getElementById('cron-day').value;
+            const month = document.getElementById('cron-month').value;
+            const dayOfWeek = document.getElementById('cron-day-of-week').value;
+
+            const cronExpression = `${minute} ${hour} ${day} ${month} ${dayOfWeek}`;
+
+            // Optional: Basic validation (e.g., check number of parts)
+            if (cronExpression.split(' ').length !== 5) {
+                 showToast('生成的Cron表达式格式不正确，请检查输入。');
+                 return;
+            }
+
+            document.getElementById('task-cron').value = cronExpression;
+            hideCronGeneratorModal();
         }
     </script>
 </body>

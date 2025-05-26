@@ -117,8 +117,17 @@
                 <div class="bg-white rounded-lg shadow-md overflow-hidden">
                     <div class="p-4 lg:p-6 border-b">
                         <div class="flex justify-between items-center">
-                            <h2 class="text-xl lg:text-2xl font-bold">运行日志</h2>
-                            <div class="flex items-center space-x-4">
+                            <h2 class="text-xl lg:text-2xl font-bold"></h2>
+                            
+                        </div>
+                         <div class="mt-4 flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0 lg:space-x-4">
+                            
+                             <!-- 只看报错筛选 -->
+                            <div class="flex items-center"> {# This div contains the checkbox and label #}
+                                <input type="checkbox" id="only-errors-checkbox" class="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out rounded focus:ring-blue-500" {% if request.query_params.get('only_errors') == 'true' %}checked{% endif %}>
+                                <label for="only-errors-checkbox" class="ml-2 block text-sm text-gray-700">只看报错</label>
+                             </div>
+                             <div class="flex items-center space-x-4"> {# This div contains the task filter and clear button #}
                                 <div class="relative">
                                     <select id="task-filter" class="appearance-none bg-white border border-gray-300 rounded-lg pl-4 pr-10 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer hover:border-gray-400 transition-colors duration-200">
                                         <option value="">所有任务</option>
@@ -134,8 +143,8 @@
                                     <i class="fas fa-trash mr-2"></i>清除日志
                                 </button>
                             </div>
-                        </div>
-                    </div>
+                          </div>
+                      </div>
 
                     <!-- 日志列表 -->
                     <div class="overflow-x-auto">
@@ -177,7 +186,7 @@
                                         {{ log.finished_at.strftime('%m月%d日 %H:%M:%S') if log.finished_at else '-' }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <button onclick="showLogDetails({{ log.id }})" class="text-blue-600 hover:text-blue-900">
+                                        <button data-log-id="{{ log.id }}" class="text-blue-600 hover:text-blue-900">
                                             <i class="fas fa-eye"></i>
                                         </button>
                                     </td>
@@ -185,6 +194,39 @@
                                 {% endfor %}
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- 分页控件 -->
+                    <div class="px-6 py-4 bg-white border-t border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-4">
+                                <span class="text-sm text-gray-700">
+                                    显示 {{ (current_page - 1) * per_page + 1 }} 到 {{ min(current_page * per_page, total_count) }} 条，共 {{ total_count }} 条记录
+                                </span>
+                                <select id="per-page-select" class="border border-gray-300 rounded-md px-2 py-1 text-sm">
+                                    <option value="15" {% if per_page == 15 %}selected{% endif %}>15条/页</option>
+                                    <option value="30" {% if per_page == 30 %}selected{% endif %}>30条/页</option>
+                                    <option value="50" {% if per_page == 50 %}selected{% endif %}>50条/页</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center space-x-2" id="pagination-controls">
+                                <button data-page="1" class="px-3 py-1 rounded-md text-sm {% if current_page == 1 %}bg-gray-100 text-gray-400 cursor-not-allowed{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %}" {% if current_page == 1 %}disabled{% endif %}>
+                                    首页
+                                </button>
+                                <button data-page="{{ current_page - 1 }}" class="px-3 py-1 rounded-md text-sm {% if current_page == 1 %}bg-gray-100 text-gray-400 cursor-not-allowed{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %}" {% if current_page == 1 %}disabled{% endif %}>
+                                    上一页
+                                </button>
+                                <span class="px-3 py-1 text-sm text-gray-700">
+                                    第 {{ current_page }} 页，共 {{ total_pages }} 页
+                                </span>
+                                <button data-page="{{ current_page + 1 }}" class="px-3 py-1 rounded-md text-sm {% if current_page == total_pages %}bg-gray-100 text-gray-400 cursor-not-allowed{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %}" {% if current_page == total_pages %}disabled{% endif %}>
+                                    下一页
+                                </button>
+                                <button data-page="{{ total_pages }}" class="px-3 py-1 rounded-md text-sm {% if current_page == total_pages %}bg-gray-100 text-gray-400 cursor-not-allowed{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %}" {% if current_page == total_pages %}disabled{% endif %}>
+                                    末页
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -321,12 +363,6 @@
             document.getElementById('log-details-modal').classList.add('hidden');
         }
 
-        // 任务筛选功能
-        document.getElementById('task-filter').addEventListener('change', function() {
-            const taskId = this.value;
-            window.location.href = taskId ? `/logs?task_id=${taskId}` : '/logs';
-        });
-
         // 清除日志功能
         async function clearLogs() {
             if (!confirm('确定要清除所有日志吗？此操作不可恢复。')) {
@@ -350,6 +386,60 @@
                 showToast('清除失败');
             }
         }
+
+        // 统一处理筛选和分页跳转
+        function updateLogsList(page) {
+            const taskId = document.getElementById('task-filter').value;
+            const perPage = document.getElementById('per-page-select').value;
+            const onlyErrors = document.getElementById('only-errors-checkbox').checked;
+
+            let url = `/logs?page=${page}&per_page=${perPage}`;
+            if (taskId) {
+                url += `&task_id=${taskId}`;
+            }
+            if (onlyErrors) {
+                url += `&only_errors=true`;
+            }
+            window.location.href = url;
+        }
+
+        // 任务筛选功能
+        document.getElementById('task-filter').addEventListener('change', function() {
+            // 当筛选条件变化时，回到第一页
+            updateLogsList(1);
+        });
+
+        // 每页显示数量变化处理
+        document.getElementById('per-page-select').addEventListener('change', function() {
+            // 当每页数量变化时，回到第一页
+            updateLogsList(1);
+        });
+
+        // 只看报错勾选框变化处理
+        document.getElementById('only-errors-checkbox').addEventListener('change', function() {
+            // 当筛选条件变化时，回到第一页
+            updateLogsList(1);
+        });
+
+        // 为分页按钮添加事件监听器
+        document.querySelectorAll('#pagination-controls button').forEach(button => {
+            button.addEventListener('click', function() {
+                const page = parseInt(this.dataset.page);
+                if (!isNaN(page) && !this.disabled) {
+                    updateLogsList(page);
+                }
+            });
+        });
+
+        // 为日志详情按钮添加事件监听器
+        document.querySelectorAll('button[data-log-id]').forEach(button => {
+            button.addEventListener('click', function() {
+                const logId = this.dataset.logId;
+                if (logId) {
+                    showLogDetails(logId);
+                }
+            });
+        });
     </script>
 </body>
 </html> 

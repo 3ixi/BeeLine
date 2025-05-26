@@ -27,13 +27,12 @@ from passlib.context import CryptContext
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # 定义当前版本
-CURRENT_VERSION = "1.0.5"
+CURRENT_VERSION = "1.0.6"
 
 # 创建必要的目录
 os.makedirs("static", exist_ok=True)
 os.makedirs("templates", exist_ok=True)
 os.makedirs("scripts", exist_ok=True)
-os.makedirs("script_files", exist_ok=True)  # 新增：用于存储脚本关联文件
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -471,16 +470,32 @@ async def install_package(request: Request, db: SessionLocal = Depends(get_db)):
 
 # 日志管理
 @app.get("/logs", response_class=HTMLResponse)
-async def list_logs(request: Request, db: SessionLocal = Depends(get_db), task_id: Optional[int] = None):
+async def list_logs(request: Request, db: SessionLocal = Depends(get_db), task_id: Optional[int] = None, page: int = 1, per_page: int = 15, only_errors: Optional[str] = None):
     user = get_current_user(request, db=db)
     if not user:
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
 
     try:
+        # 构建基础查询
         query = db.query(TaskLog).order_by(TaskLog.started_at.desc())
         if task_id is not None:
             query = query.filter(TaskLog.task_id == task_id)
-        logs = query.all()
+            
+        # 只看报错筛选
+        if only_errors == 'true':
+            query = query.filter(TaskLog.status == 'failed')
+        
+        # 计算总记录数
+        total_count = query.count()
+        
+        # 计算总页数
+        total_pages = (total_count + per_page - 1) // per_page
+        
+        # 确保页码在有效范围内
+        page = max(1, min(page, total_pages)) if total_pages > 0 else 1
+        
+        # 获取分页数据
+        logs = query.offset((page - 1) * per_page).limit(per_page).all()
 
         tasks = db.query(Task).all() # 获取所有任务以用于过滤下拉框
 
@@ -490,8 +505,13 @@ async def list_logs(request: Request, db: SessionLocal = Depends(get_db), task_i
                 "request": request,
                 "username": user,
                 "logs": logs,
-                "tasks": tasks, # 传递任务到模板
-                "selected_task_id": task_id # 传递选中的任务ID以用于下拉框选择
+                "tasks": tasks,
+                "selected_task_id": task_id,
+                "current_page": page,
+                "per_page": per_page,
+                "total_pages": total_pages,
+                "total_count": total_count,
+                "min": min  # 添加 min 函数到上下文
             }
         )
     finally:
