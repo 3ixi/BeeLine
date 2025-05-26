@@ -320,18 +320,18 @@
                 const data = await response.json();
                 const logDurationElement = document.getElementById('log-duration');
 
-                // Calculate and display duration (handle potential null/invalid dates)
+                // 计算并显示持续时间（需处理可能存在的空值/无效日期）
                 let durationText = '任务未完成或无时间信息';
                 if (data.started_at && data.finished_at) {
                     try {
                         const start = new Date(data.started_at);
                         const end = new Date(data.finished_at);
 
-                        // Check if dates are valid
+                        // 检查日期是否有效
                         if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-                             const durationMs = end - start; // Duration in milliseconds
+                             const durationMs = end - start; // 持续时间（毫秒）
 
-                            // Convert milliseconds to a human-readable format (e.g., seconds, minutes, hours)
+                            // 将毫秒转换为人类可读的格式（例如，秒、分钟、小时）
                             const totalSeconds = Math.floor(durationMs / 1000);
                             const hours = Math.floor(totalSeconds / 3600);
                             const minutes = Math.floor((totalSeconds % 3600) / 60);

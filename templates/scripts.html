@@ -864,7 +864,7 @@
             try {
                 const response = await fetch(`/api/script-files/${fileId}`); // 需要一个API来获取文件详情，或者直接使用loadScriptFiles获取的数据
                 if (!response.ok) throw new Error('获取文件详情失败');
-                const fileDetails = await response.json(); // 假设这个API返回文件的所有详情，包括description
+                const fileDetails = await response.json(); 
 
                 const contentResponse = await fetch(`/api/script-files/${fileId}/content`);
                 if (!contentResponse.ok) {
