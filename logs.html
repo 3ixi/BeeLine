@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeeLine - 运行日志</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+</head>
+<body class="bg-gray-100">
+    <!-- 移动端顶部导航栏 -->
+    <div class="lg:hidden bg-white shadow-md">
+        <div class="flex items-center justify-between p-4">
+            <div class="flex items-center space-x-2">
+                <img src="/static/images/logo.jpg" alt="BeeLine Logo" class="h-8 w-8 object-cover">
+                <h1 class="text-xl font-bold text-gray-800">BeeLine</h1>
+            </div>
+            <button id="mobile-menu-button" class="text-gray-600 hover:text-gray-900">
+                <i class="fas fa-bars text-2xl"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- 移动端侧边栏 -->
+    <div id="mobile-menu" class="lg:hidden fixed inset-0 bg-gray-800 bg-opacity-50 z-40 hidden">
+        <div class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out -translate-x-full">
+            <div class="p-4 border-b">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <img src="/static/images/logo.jpg" alt="BeeLine Logo" class="h-8 w-8 object-cover">
+                        <h2 class="text-xl font-bold text-gray-800">菜单</h2>
+                    </div>
+                    <button id="close-menu" class="text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+                <p class="text-sm text-gray-600 mt-2">欢迎, {{ username }}</p>
+            </div>
+            <nav class="mt-4">
+                <a href="/" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-chart-line w-6"></i> 仪表盘
+                </a>
+                <a href="/scripts" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-code w-6"></i> 脚本管理
+                </a>
+                <a href="/tasks" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-clock w-6"></i> 任务调度
+                </a>
+                <a href="/packages" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-box w-6"></i> 包管理
+                </a>
+                <a href="/env" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-cog w-6"></i> 环境变量
+                </a>
+                <a href="/logs" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900 bg-gray-100">
+                    <i class="fas fa-list w-6"></i> 运行日志
+                </a>
+                <a href="/about" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-info-circle w-6"></i> 关于
+                </a>
+                <a href="/settings" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-user-cog w-6"></i> 系统设置
+                </a>
+                <a href="/logout" class="block px-4 py-3 text-red-600 hover:bg-gray-100 hover:text-red-900">
+                    <i class="fas fa-sign-out-alt w-6"></i> 退出登录
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <div class="flex h-screen">
+        <!-- 桌面端侧边栏 -->
+        <div class="hidden lg:block w-64 bg-white shadow-lg">
+            <div class="p-4 border-b">
+                <div class="flex items-center space-x-2">
+                    <img src="/static/images/logo.jpg" alt="BeeLine Logo" class="h-8 w-8 object-cover">
+                    <h1 class="text-xl font-bold text-gray-800">BeeLine</h1>
+                </div>
+                <p class="text-sm text-gray-600">欢迎, {{ username }}</p>
+            </div>
+            <nav class="mt-4">
+                <a href="/" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-chart-line w-6"></i> 仪表盘
+                </a>
+                <a href="/scripts" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-code w-6"></i> 脚本管理
+                </a>
+                <a href="/tasks" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-clock w-6"></i> 任务调度
+                </a>
+                <a href="/packages" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-box w-6"></i> 包管理
+                </a>
+                <a href="/env" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-cog w-6"></i> 环境变量
+                </a>
+                <a href="/logs" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900 bg-gray-100">
+                    <i class="fas fa-list w-6"></i> 运行日志
+                </a>
+                <a href="/about" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-info-circle w-6"></i> 关于
+                </a>
+                <a href="/settings" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-user-cog w-6"></i> 系统设置
+                </a>
+                <a href="/logout" class="block px-4 py-3 text-red-600 hover:bg-gray-100 hover:text-red-900">
+                    <i class="fas fa-sign-out-alt w-6"></i> 退出登录
+                </a>
+            </nav>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="flex-1 overflow-auto">
+            <div class="p-4 lg:p-8">
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="p-4 lg:p-6 border-b">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-xl lg:text-2xl font-bold"></h2>
+                            
+                        </div>
+                         <div class="mt-4 flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0 lg:space-x-4">
+                            
+                             <!-- 只看报错筛选 -->
+                            <div class="flex items-center"> {# This div contains the checkbox and label #}
+                                <input type="checkbox" id="only-errors-checkbox" class="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out rounded focus:ring-blue-500" {% if request.query_params.get('only_errors') == 'true' %}checked{% endif %}>
+                                <label for="only-errors-checkbox" class="ml-2 block text-sm text-gray-700">只看报错</label>
+                             </div>
+                             <div class="flex items-center space-x-4"> {# This div contains the task filter and clear button #}
+                                <div class="relative">
+                                    <select id="task-filter" class="appearance-none bg-white border border-gray-300 rounded-lg pl-4 pr-10 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer hover:border-gray-400 transition-colors duration-200">
+                                        <option value="">所有任务</option>
+                                        {% for task in tasks %}
+                                        <option value="{{ task.id }}" {% if task.id == selected_task_id %}selected{% endif %}>{{ task.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                        <i class="fas fa-chevron-down text-sm"></i>
+                                    </div>
+                                </div>
+                                <button onclick="clearLogs()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200">
+                                    <i class="fas fa-trash mr-2"></i>清除日志
+                                </button>
+                            </div>
+                          </div>
+                      </div>
+
+                    <!-- 日志列表 -->
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">任务</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">开始时间</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">结束时间</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                {% for log in logs %}
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-clock text-blue-600 mr-2"></i>
+                                            <span class="text-sm font-medium text-gray-900">{{ log.task.name }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                            {% if log.status == 'success' %}
+                                                bg-green-100 text-green-800
+                                            {% elif log.status == 'failed' %}
+                                                bg-red-100 text-red-800
+                                            {% else %}
+                                                bg-yellow-100 text-yellow-800
+                                            {% endif %}">
+                                            {{ '成功' if log.status == 'success' else '失败' if log.status == 'failed' else '运行中' }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {{ log.started_at.strftime('%m月%d日 %H:%M:%S') }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {{ log.finished_at.strftime('%m月%d日 %H:%M:%S') if log.finished_at else '-' }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <button data-log-id="{{ log.id }}" class="text-blue-600 hover:text-blue-900">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 分页控件 -->
+                    <div class="px-6 py-4 bg-white border-t border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-4">
+                                <span class="text-sm text-gray-700">
+                                    显示 {{ (current_page - 1) * per_page + 1 }} 到 {{ min(current_page * per_page, total_count) }} 条，共 {{ total_count }} 条记录
+                                </span>
+                                <select id="per-page-select" class="border border-gray-300 rounded-md px-2 py-1 text-sm">
+                                    <option value="15" {% if per_page == 15 %}selected{% endif %}>15条/页</option>
+                                    <option value="30" {% if per_page == 30 %}selected{% endif %}>30条/页</option>
+                                    <option value="50" {% if per_page == 50 %}selected{% endif %}>50条/页</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center space-x-2" id="pagination-controls">
+                                <button data-page="1" class="px-3 py-1 rounded-md text-sm {% if current_page == 1 %}bg-gray-100 text-gray-400 cursor-not-allowed{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %}" {% if current_page == 1 %}disabled{% endif %}>
+                                    首页
+                                </button>
+                                <button data-page="{{ current_page - 1 }}" class="px-3 py-1 rounded-md text-sm {% if current_page == 1 %}bg-gray-100 text-gray-400 cursor-not-allowed{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %}" {% if current_page == 1 %}disabled{% endif %}>
+                                    上一页
+                                </button>
+                                <span class="px-3 py-1 text-sm text-gray-700">
+                                    第 {{ current_page }} 页，共 {{ total_pages }} 页
+                                </span>
+                                <button data-page="{{ current_page + 1 }}" class="px-3 py-1 rounded-md text-sm {% if current_page == total_pages %}bg-gray-100 text-gray-400 cursor-not-allowed{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %}" {% if current_page == total_pages %}disabled{% endif %}>
+                                    下一页
+                                </button>
+                                <button data-page="{{ total_pages }}" class="px-3 py-1 rounded-md text-sm {% if current_page == total_pages %}bg-gray-100 text-gray-400 cursor-not-allowed{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %}" {% if current_page == total_pages %}disabled{% endif %}>
+                                    末页
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 日志详情模态框 -->
+    <div id="log-details-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-medium text-gray-900">日志详情</h3>
+                        <button onclick="hideLogDetails()" class="text-gray-400 hover:text-gray-500">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-700">耗时</h4>
+                            <p id="log-duration" class="mt-1 p-2 bg-gray-50 rounded-lg text-sm text-gray-900"></p>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-700">输出</h4>
+                            <pre id="log-output" class="mt-1 p-4 bg-gray-50 rounded-lg text-sm font-mono overflow-auto max-h-96"></pre>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-700">错误</h4>
+                            <pre id="log-error" class="mt-1 p-4 bg-gray-50 rounded-lg text-sm font-mono overflow-auto max-h-96"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div id="toast" class="fixed bottom-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg transform translate-y-full opacity-0 transition-all duration-300">
+        <span id="toast-message"></span>
+    </div>
+
+    <script>
+        // Toast 提示功能
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            toastMessage.textContent = message;
+            toast.classList.remove('translate-y-full', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-full', 'opacity-0');
+            }, 3000);
+        }
+
+        // 移动端菜单控制
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const closeMenuButton = document.getElementById('close-menu');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const mobileMenuContent = mobileMenu.querySelector('div');
+
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.remove('hidden');
+            setTimeout(() => {
+                mobileMenuContent.classList.remove('-translate-x-full');
+            }, 10);
+        });
+
+        closeMenuButton.addEventListener('click', () => {
+            mobileMenuContent.classList.add('-translate-x-full');
+            setTimeout(() => {
+                mobileMenu.classList.add('hidden');
+            }, 300);
+        });
+
+        mobileMenu.addEventListener('click', (e) => {
+            if (e.target === mobileMenu) {
+                mobileMenuContent.classList.add('-translate-x-full');
+                setTimeout(() => {
+                    mobileMenu.classList.add('hidden');
+                }, 300);
+            }
+        });
+
+        // 日志详情模态框控制
+        async function showLogDetails(logId) {
+            try {
+                const response = await fetch(`/logs/${logId}`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch log details');
+                }
+                
+                const data = await response.json();
+                const logDurationElement = document.getElementById('log-duration');
+
+                // 计算并显示持续时间（需处理可能存在的空值/无效日期）
+                let durationText = '任务未完成或无时间信息';
+                if (data.started_at && data.finished_at) {
+                    try {
+                        const start = new Date(data.started_at);
+                        const end = new Date(data.finished_at);
+
+                        // 检查日期是否有效
+                        if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                             const durationMs = end - start; // 持续时间（毫秒）
+
+                            // 将毫秒转换为人类可读的格式（例如，秒、分钟、小时）
+                            const totalSeconds = Math.floor(durationMs / 1000);
+                            const hours = Math.floor(totalSeconds / 3600);
+                            const minutes = Math.floor((totalSeconds % 3600) / 60);
+                            const seconds = totalSeconds % 60;
+
+                            if (hours > 0) {
+                                durationText = `${hours} 小时 ${minutes} 分 ${seconds} 秒`;
+                            } else if (minutes > 0) {
+                                durationText = `${minutes} 分 ${seconds} 秒`;
+                            } else {
+                                durationText = `${totalSeconds} 秒`;
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Error parsing dates or calculating duration:", e);
+                        durationText = '计算时长失败';
+                    }
+                }
+                logDurationElement.textContent = durationText;
+                document.getElementById('log-details-modal').classList.remove('hidden');
+                document.getElementById('log-output').textContent = data.output || '无输出';
+                document.getElementById('log-error').textContent = data.error || '无错误';
+            } catch (error) {
+                showToast('获取日志详情失败');
+            }
+        }
+
+        function hideLogDetails() {
+            document.getElementById('log-details-modal').classList.add('hidden');
+        }
+
+        // 清除日志功能
+        async function clearLogs() {
+            if (!confirm('确定要清除所有日志吗？此操作不可恢复。')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/logs', {
+                    method: 'DELETE',
+                });
+
+                if (response.ok) {
+                    showToast('日志已清除');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showToast('清除失败');
+                }
+            } catch (error) {
+                showToast('清除失败');
+            }
+        }
+
+        // 统一处理筛选和分页跳转
+        function updateLogsList(page) {
+            const taskId = document.getElementById('task-filter').value;
+            const perPage = document.getElementById('per-page-select').value;
+            const onlyErrors = document.getElementById('only-errors-checkbox').checked;
+
+            let url = `/logs?page=${page}&per_page=${perPage}`;
+            if (taskId) {
+                url += `&task_id=${taskId}`;
+            }
+            if (onlyErrors) {
+                url += `&only_errors=true`;
+            }
+            window.location.href = url;
+        }
+
+        // 任务筛选功能
+        document.getElementById('task-filter').addEventListener('change', function() {
+            // 当筛选条件变化时，回到第一页
+            updateLogsList(1);
+        });
+
+        // 每页显示数量变化处理
+        document.getElementById('per-page-select').addEventListener('change', function() {
+            // 当每页数量变化时，回到第一页
+            updateLogsList(1);
+        });
+
+        // 只看报错勾选框变化处理
+        document.getElementById('only-errors-checkbox').addEventListener('change', function() {
+            // 当筛选条件变化时，回到第一页
+            updateLogsList(1);
+        });
+
+        // 为分页按钮添加事件监听器
+        document.querySelectorAll('#pagination-controls button').forEach(button => {
+            button.addEventListener('click', function() {
+                const page = parseInt(this.dataset.page);
+                if (!isNaN(page) && !this.disabled) {
+                    updateLogsList(page);
+                }
+            });
+        });
+
+        // 为日志详情按钮添加事件监听器
+        document.querySelectorAll('button[data-log-id]').forEach(button => {
+            button.addEventListener('click', function() {
+                const logId = this.dataset.logId;
+                if (logId) {
+                    showLogDetails(logId);
+                }
+            });
+        });
+    </script>
+</body>
+</html> 
