@@ -140,7 +140,7 @@
                                     </div>
                                 </div>
                                 <button onclick="clearLogs()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200">
-                                    <i class="fas fa-trash mr-2"></i>清除日志
+                                    <i class="fas fa-trash mr-2"></i>清空
                                 </button>
                             </div>
                           </div>
@@ -186,9 +186,28 @@
                                         {{ log.finished_at.strftime('%m月%d日 %H:%M:%S') if log.finished_at else '-' }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <button data-log-id="{{ log.id }}" class="text-blue-600 hover:text-blue-900">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
+                                        <div class="flex items-center space-x-2">
+                                            <!-- 查看详情按钮 -->
+                                            <div class="group relative inline-block">
+                                                <button data-log-id="{{ log.id }}" class="text-blue-600 hover:text-blue-900">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <span class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                                                    查看
+                                                    <span class="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-800 transform rotate-45 -mb-1"></span>
+                                                </span>
+                                            </div>
+                                            <!-- 删除按钮 -->
+                                            <div class="group relative inline-block">
+                                                <button onclick="deleteLog('{{ log.id }}')" class="text-red-600 hover:text-red-900">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                                <span class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                                                    删除这条
+                                                    <span class="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-800 transform rotate-45 -mb-1"></span>
+                                                </span>
+                                            </div>
+                                        </div>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -198,33 +217,41 @@
 
                     <!-- 分页控件 -->
                     <div class="px-6 py-4 bg-white border-t border-gray-200">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center space-x-4">
+                        <div class="flex flex-col space-y-4 lg:space-y-0 lg:flex-row lg:items-center lg:justify-between">
+                            <!-- 每页显示数量和记录总数 -->
+                            <div class="flex flex-col space-y-2 lg:space-y-0 lg:flex-row lg:items-center lg:space-x-4">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-sm text-gray-700 whitespace-nowrap">每页显示：</span>
+                                    <select id="per-page-select" class="border border-gray-300 rounded-md px-2 py-1 text-sm">
+                                        <option value="15" {% if per_page == 15 %}selected{% endif %}>15条</option>
+                                        <option value="30" {% if per_page == 30 %}selected{% endif %}>30条</option>
+                                        <option value="50" {% if per_page == 50 %}selected{% endif %}>50条</option>
+                                    </select>
+                                </div>
                                 <span class="text-sm text-gray-700">
-                                    显示 {{ (current_page - 1) * per_page + 1 }} 到 {{ min(current_page * per_page, total_count) }} 条，共 {{ total_count }} 条记录
+                                    显示 {{ (current_page - 1) * per_page + 1 }} 到 {{ min(current_page * per_page, total_count) }} 条，共 {{ total_count }} 条
                                 </span>
-                                <select id="per-page-select" class="border border-gray-300 rounded-md px-2 py-1 text-sm">
-                                    <option value="15" {% if per_page == 15 %}selected{% endif %}>15条/页</option>
-                                    <option value="30" {% if per_page == 30 %}selected{% endif %}>30条/页</option>
-                                    <option value="50" {% if per_page == 50 %}selected{% endif %}>50条/页</option>
-                                </select>
                             </div>
-                            <div class="flex items-center space-x-2" id="pagination-controls">
-                                <button data-page="1" class="px-3 py-1 rounded-md text-sm {% if current_page == 1 %}bg-gray-100 text-gray-400 cursor-not-allowed{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %}" {% if current_page == 1 %}disabled{% endif %}>
-                                    首页
-                                </button>
-                                <button data-page="{{ current_page - 1 }}" class="px-3 py-1 rounded-md text-sm {% if current_page == 1 %}bg-gray-100 text-gray-400 cursor-not-allowed{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %}" {% if current_page == 1 %}disabled{% endif %}>
-                                    上一页
-                                </button>
-                                <span class="px-3 py-1 text-sm text-gray-700">
-                                    第 {{ current_page }} 页，共 {{ total_pages }} 页
-                                </span>
-                                <button data-page="{{ current_page + 1 }}" class="px-3 py-1 rounded-md text-sm {% if current_page == total_pages %}bg-gray-100 text-gray-400 cursor-not-allowed{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %}" {% if current_page == total_pages %}disabled{% endif %}>
-                                    下一页
-                                </button>
-                                <button data-page="{{ total_pages }}" class="px-3 py-1 rounded-md text-sm {% if current_page == total_pages %}bg-gray-100 text-gray-400 cursor-not-allowed{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %}" {% if current_page == total_pages %}disabled{% endif %}>
-                                    末页
-                                </button>
+                            
+                            <!-- 分页按钮 -->
+                            <div class="flex justify-center lg:justify-end">
+                                <div class="inline-flex rounded-md shadow-sm">
+                                    <button data-page="1" class="px-2 lg:px-3 py-1 rounded-l-md text-sm border-r {% if current_page == 1 %}bg-gray-100 text-gray-400 cursor-not-allowed{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %}" {% if current_page == 1 %}disabled{% endif %}>
+                                        首页
+                                    </button>
+                                    <button data-page="{{ current_page - 1 }}" class="px-2 lg:px-3 py-1 border-r text-sm {% if current_page == 1 %}bg-gray-100 text-gray-400 cursor-not-allowed{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %}" {% if current_page == 1 %}disabled{% endif %}>
+                                        上一页
+                                    </button>
+                                    <span class="px-2 lg:px-3 py-1 text-sm text-gray-700 border-r bg-white">
+                                        {{ current_page }}/{{ total_pages }}
+                                    </span>
+                                    <button data-page="{{ current_page + 1 }}" class="px-2 lg:px-3 py-1 border-r text-sm {% if current_page == total_pages %}bg-gray-100 text-gray-400 cursor-not-allowed{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %}" {% if current_page == total_pages %}disabled{% endif %}>
+                                        下一页
+                                    </button>
+                                    <button data-page="{{ total_pages }}" class="px-2 lg:px-3 py-1 rounded-r-md text-sm {% if current_page == total_pages %}bg-gray-100 text-gray-400 cursor-not-allowed{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %}" {% if current_page == total_pages %}disabled{% endif %}>
+                                        末页
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -421,14 +448,61 @@
             updateLogsList(1);
         });
 
-        // 为分页按钮添加事件监听器
-        document.querySelectorAll('#pagination-controls button').forEach(button => {
-            button.addEventListener('click', function() {
-                const page = parseInt(this.dataset.page);
-                if (!isNaN(page) && !this.disabled) {
-                    updateLogsList(page);
+        // 删除单条日志
+        async function deleteLog(logId) {
+            if (!confirm('确定要删除这条日志记录吗？此操作不可恢复。')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/logs/${logId}`, {
+                    method: 'DELETE',
+                });
+
+                if (response.ok) {
+                    showToast('日志已删除');
+                    // 等待提示显示后再刷新页面
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showToast('删除失败');
+                }
+            } catch (error) {
+                showToast('删除失败');
+                console.error('Error:', error);
+            }
+        }
+
+        // 分页按钮事件监听器 - 使用事件委托模式
+        document.addEventListener('DOMContentLoaded', function() {
+            // 使用事件委托，将事件监听器添加到分页按钮的父元素
+            document.querySelector('.px-6.py-4.bg-white.border-t').addEventListener('click', function(e) {
+                // 查找最近的具有 data-page 属性的按钮
+                const button = e.target.closest('button[data-page]');
+                if (button && !button.disabled) {
+                    const page = parseInt(button.dataset.page);
+                    if (!isNaN(page)) {
+                        updateLogsList(page);
+                    }
                 }
             });
+
+            // 同时确保其他相关控件的事件监听器也正确绑定
+            const taskFilter = document.getElementById('task-filter');
+            if (taskFilter) {
+                taskFilter.addEventListener('change', () => updateLogsList(1));
+            }
+
+            const perPageSelect = document.getElementById('per-page-select');
+            if (perPageSelect) {
+                perPageSelect.addEventListener('change', () => updateLogsList(1));
+            }
+
+            const onlyErrorsCheckbox = document.getElementById('only-errors-checkbox');
+            if (onlyErrorsCheckbox) {
+                onlyErrorsCheckbox.addEventListener('change', () => updateLogsList(1));
+            }
         });
 
         // 为日志详情按钮添加事件监听器

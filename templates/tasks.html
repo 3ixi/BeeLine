@@ -653,7 +653,10 @@
                     method: 'POST',
                 });
 
-                if (response.ok) {
+                const data = await response.json();
+                if (data.status === "running") {
+                    showToast('脚本正在运行');
+                } else if (response.ok) {
                     showToast('任务已开始运行');
                 } else {
                     showToast('运行失败');

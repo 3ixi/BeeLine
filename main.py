@@ -27,7 +27,7 @@ from passlib.context import CryptContext
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # 定义当前版本
-CURRENT_VERSION = "1.0.6"
+CURRENT_VERSION = "1.0.7"
 
 # 创建必要的目录
 os.makedirs("static", exist_ok=True)
@@ -86,6 +86,21 @@ running_tasks = {}
 
 # 存储环境变量
 env_vars = {}
+
+def validate_script_filename(filename):
+    """验证脚本文件名是否合法
+    
+    Args:
+        filename: 要验证的文件名
+        
+    Returns:
+        tuple: (是否合法, 错误信息/处理后的文件名)
+    """
+    if ' ' in filename:
+        return False, "文件名不能包含空格"
+    if not filename.endswith('.py'):
+        filename += '.py'
+    return True, filename
 
 def get_db():
     db = SessionLocal()
@@ -541,6 +556,22 @@ async def get_log_details(log_id: int, request: Request, db: SessionLocal = Depe
     finally:
         db.close()
 
+@app.delete("/logs/{log_id}")
+async def delete_log(log_id: int, request: Request, db: SessionLocal = Depends(get_db)):
+    user = get_current_user(request, db=db)
+    if not user:
+        raise HTTPException(status_code=401, detail="未登录")
+        
+    # 在数据库中查找并删除日志
+    log = db.query(TaskLog).filter(TaskLog.id == log_id).first()
+    if not log:
+        raise HTTPException(status_code=404, detail="日志不存在")
+    
+    db.delete(log)
+    db.commit()
+    
+    return {"message": "日志已删除"}
+
 @app.delete("/logs")
 async def clear_logs(request: Request, db: SessionLocal = Depends(get_db)):
     user = get_current_user(request, db=db)
@@ -581,13 +612,13 @@ async def upload_script(
 ):
     user = get_current_user(request, db=db)
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
-
-    if not file.filename.endswith('.py'):
-        raise HTTPException(status_code=400, detail="只支持上传Python脚本文件")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")    # 验证文件名
+    is_valid, result = validate_script_filename(file.filename)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=result)
 
     # 保存文件
-    file_path = os.path.join("scripts", file.filename)
+    file_path = os.path.join("scripts", result)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
@@ -642,10 +673,19 @@ async def update_script(
 
     script = db.query(Script).filter(Script.id == script_id).first()
     if not script:
-        raise HTTPException(status_code=404, detail="脚本不存在")
-
-    # 如果文件名已更改，需要重命名文件
+        raise HTTPException(status_code=404, detail="脚本不存在")    # 如果文件名已更改，需要验证并重命名文件
     if filename != script.filename:
+        # 验证新文件名
+        is_valid, result = validate_script_filename(filename)
+        if not is_valid:
+            raise HTTPException(status_code=400, detail=result)
+        filename = result
+
+        # 检查新文件名是否已存在
+        existing_script = db.query(Script).filter(Script.filename == filename).first()
+        if existing_script and existing_script.id != script_id:
+            raise HTTPException(status_code=400, detail="文件名已存在")
+
         old_path = os.path.join("scripts", script.filename)
         new_path = os.path.join("scripts", filename)
         if os.path.exists(old_path):
@@ -674,16 +714,16 @@ async def create_script(
 ):
     user = get_current_user(request, db=db)
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")    # 验证文件名
+    is_valid, result = validate_script_filename(filename)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=result)
+    filename = result
 
     # 检查文件名是否已存在
     existing_script = db.query(Script).filter(Script.filename == filename).first()
     if existing_script:
         raise HTTPException(status_code=400, detail="文件名已存在")
-
-    # 确保文件名以.py结尾
-    if not filename.endswith('.py'):
-        filename += '.py'
 
     # 创建文件
     file_path = os.path.join("scripts", filename)
@@ -1209,11 +1249,9 @@ async def run_task(
 
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:
-        raise HTTPException(status_code=404, detail="任务不存在")
-
-    # 检查任务是否正在运行
+        raise HTTPException(status_code=404, detail="任务不存在")    # 检查任务是否正在运行
     if task_id in running_tasks:
-        raise HTTPException(status_code=400, detail="任务正在运行中")
+        return JSONResponse({"message": "任务正在运行", "status": "running"})
 
     # 为避免线程安全问题，为线程创建一个新的数据库会话
     def run_script():
@@ -1393,4 +1431,4 @@ async def about_page(request: Request, db: SessionLocal = Depends(get_db)):
     )
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False, reload_dirs=["templates", "static"]) 
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False, reload_dirs=["templates", "static"])

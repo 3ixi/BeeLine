@@ -304,7 +304,7 @@
                              <div class="relative rounded-md shadow-sm">
                                 <input type="text" name="filename" id="new-script-filename" required
                                     class="block w-full rounded-md border-gray-300 pl-3 pr-10 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm transition duration-150 ease-in-out"
-                                    placeholder="请输入文件名 (例如: my_script.py)">
+                                    placeholder="请输入文件名 (例如: script.py)">
                                 <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                                     <i class="fas fa-file-code text-gray-400"></i>
                                 </div>
@@ -577,6 +577,7 @@
                     method: 'POST',
                     body: formData,
                 });
+                const result = await response.json();
                 if (response.ok) {
                     showToast('脚本上传成功');
                     hideUploadModal();
@@ -584,7 +585,8 @@
                         window.location.reload();
                     }, 1000);
                 } else {
-                    showToast('上传失败');
+                    // 显示错误详情
+                    showToast(result.detail || '上传失败');
                 }
             } catch (error) {
                 showToast('上传失败');
@@ -609,6 +611,7 @@
                     method: 'POST',
                     body: dataToSend, // 直接发送 FormData
                 });
+                const result = await response.json();
                 if (response.ok) {
                     showToast('脚本创建成功');
                     hideNewScriptModal();
@@ -616,7 +619,8 @@
                         window.location.reload();
                     }, 1000);
                 } else {
-                    showToast('创建失败');
+                    // 显示错误详情
+                    showToast(result.detail || '创建失败');
                 }
             } catch (error) {
                 showToast('创建失败');
