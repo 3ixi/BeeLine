@@ -48,6 +48,9 @@
                 <a href="/tasks" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
                     <i class="fas fa-clock w-6"></i> 任务调度
                 </a>
+                <a href="/filemanager" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-folder-open w-6"></i> 文件管理
+                </a>
                 <a href="/packages" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
                     <i class="fas fa-box w-6"></i> 包管理
                 </a>
@@ -89,6 +92,9 @@
                 </a>
                 <a href="/tasks" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
                     <i class="fas fa-clock w-6"></i> 任务调度
+                </a>
+                <a href="/filemanager" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-folder-open w-6"></i> 文件管理
                 </a>
                 <a href="/packages" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
                     <i class="fas fa-box w-6"></i> 包管理
@@ -148,10 +154,8 @@
                                 <ul class="text-sm text-gray-600 space-y-1">
                                     <li>• 上传、编辑和删除 Python 脚本</li>
                                     <li>• 语法高亮和代码格式化</li>
-                                    <!-- <li>• 脚本依赖分析</li> -->
                                 </ul>
                             </div>
-                            
                             <!-- 任务调度 -->
                             <div class="border rounded-lg p-4 hover:shadow-md transition-shadow">
                                 <div class="flex items-center mb-2">
@@ -165,7 +169,6 @@
                                     <li>• 支持Cron表达式配置</li>
                                 </ul>
                             </div>
-                            
                             <!-- 包管理 -->
                             <div class="border rounded-lg p-4 hover:shadow-md transition-shadow">
                                 <div class="flex items-center mb-2">
@@ -180,7 +183,6 @@
                                     <li>• 包版本管理</li>
                                 </ul>
                             </div>
-                            
                             <!-- 环境管理 -->
                             <div class="border rounded-lg p-4 hover:shadow-md transition-shadow">
                                 <div class="flex items-center mb-2">
@@ -192,6 +194,21 @@
                                 <ul class="text-sm text-gray-600 space-y-1">
                                     <li>• 脚本特定环境变量</li>
                                     <li>• 环境变量分组</li>
+                                </ul>
+                            </div>
+                            <!-- 文件管理 -->
+                            <div class="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                                <div class="flex items-center mb-2">
+                                    <div class="bg-blue-100 p-2 rounded-full mr-3">
+                                        <i class="fas fa-folder-open text-blue-600"></i>
+                                    </div>
+                                    <h4 class="font-semibold">文件管理</h4>
+                                </div>
+                                <ul class="text-sm text-gray-600 space-y-1">
+                                    <li>• 树状目录浏览/scripts下所有文件/文件夹</li>
+                                    <li>• 支持文本文件（部分格式）在线编辑</li>
+                                    <li>• 支持上传/下载/新建/删除/重命名文件和文件夹</li>
+                                    <li>• 支持上传整个文件夹（多文件）</li>
                                 </ul>
                             </div>
                         </div>

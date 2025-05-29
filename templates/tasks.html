@@ -48,6 +48,9 @@
                 <a href="/tasks" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900 bg-gray-100">
                     <i class="fas fa-clock w-6"></i> 任务调度
                 </a>
+                <a href="/filemanager" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-folder-open w-6"></i> 文件管理
+                </a>
                 <a href="/packages" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
                     <i class="fas fa-box w-6"></i> 包管理
                 </a>
@@ -89,6 +92,9 @@
                 </a>
                 <a href="/tasks" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900 bg-gray-100">
                     <i class="fas fa-clock w-6"></i> 任务调度
+                </a>
+                <a href="/filemanager" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-folder-open w-6"></i> 文件管理
                 </a>
                 <a href="/packages" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
                     <i class="fas fa-box w-6"></i> 包管理
@@ -657,7 +663,7 @@
                 if (data.status === "running") {
                     showToast('脚本正在运行');
                 } else if (response.ok) {
-                    showToast('任务已开始运行');
+                    showToast('任务已提交运行');
                 } else {
                     showToast('运行失败');
                 }

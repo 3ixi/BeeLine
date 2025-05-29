@@ -48,6 +48,9 @@
                 <a href="/tasks" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
                     <i class="fas fa-clock w-6"></i> 任务调度
                 </a>
+                <a href="/filemanager" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-folder-open w-6"></i> 文件管理
+                </a>
                 <a href="/packages" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
                     <i class="fas fa-box w-6"></i> 包管理
                 </a>
@@ -89,6 +92,9 @@
                 </a>
                 <a href="/tasks" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
                     <i class="fas fa-clock w-6"></i> 任务调度
+                </a>
+                <a href="/filemanager" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-folder-open w-6"></i> 文件管理
                 </a>
                 <a href="/packages" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
                     <i class="fas fa-box w-6"></i> 包管理
@@ -164,6 +170,36 @@
                         </div>
                     </form>
 
+                    <!-- 配置备份与导入 -->
+                    <div class="mt-10">
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 shadow-sm">
+                            <h3 class="text-lg font-semibold mb-4 flex items-center">
+                                <i class="fas fa-database text-blue-500 mr-2"></i> 配置备份与导入
+                            </h3>
+                            <div class="flex flex-col md:flex-row md:items-center gap-4">
+                                <!-- 导出配置 -->
+                                <button id="export-backup-btn" type="button"
+                                    class="flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md shadow hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition">
+                                    <i class="fas fa-download mr-2"></i> 导出配置
+                                </button>
+                                <span class="hidden md:inline-block text-gray-300 text-lg">|</span>
+                                <!-- 导入配置 -->
+                                <form id="import-backup-form" enctype="multipart/form-data" class="flex flex-col sm:flex-row items-center gap-2">
+                                    <label for="backup_file" class="sr-only">选择配置文件</label>
+                                    <input type="file" name="backup_file" id="backup_file" accept=".tar.gz"
+                                        class="block lg:w-64 md:w-1/2 text-sm text-gray-700 border border-gray-300 rounded-md cursor-pointer focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white file:bg-blue-50 file:text-blue-700 file:rounded-md file:border-0 file:py-2 file:px-4 file:font-semibold hover:file:bg-blue-100 transition">
+                                    <button type="submit"
+                                        class="flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition">
+                                        <i class="fas fa-upload mr-2"></i> 导入配置
+                                    </button>
+                                </form>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-4">
+                                导出将包含所有脚本文件、脚本配置、任务配置、环境变量和日志信息（不含账号密码），导入可用于迁移或恢复配置。
+                            </p>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -213,6 +249,37 @@
                 setTimeout(() => {
                     mobileMenu.classList.add('hidden');
                 }, 300);
+            }
+        });
+
+        // 配置备份导出
+        document.getElementById('export-backup-btn').addEventListener('click', function() {
+            window.location.href = '/settings/backup/export';
+        });
+        // 配置备份导入
+        document.getElementById('import-backup-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('backup_file');
+            if (!fileInput.files.length) {
+                showToast('请选择要导入的备份文件');
+                return;
+            }
+            const formData = new FormData();
+            formData.append('backup_file', fileInput.files[0]);
+            try {
+                const resp = await fetch('/settings/backup/import', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await resp.json();
+                if (resp.ok) {
+                    showToast(result.message || '导入成功');
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    showToast(result.error || '导入失败');
+                }
+            } catch (err) {
+                showToast('导入失败');
             }
         });
 

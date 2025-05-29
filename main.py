@@ -1,33 +1,35 @@
-from fastapi import FastAPI, Request, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import FastAPI, Request, Depends, HTTPException, status, UploadFile, File, Form, Response
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 import uvicorn
 import os
+import io
+import tarfile
+import tempfile
+import shutil
+import json
+import sys
 from datetime import datetime, timedelta
 from typing import Optional, List
 import secrets
 from pathlib import Path
-import shutil
-from models import SessionLocal, Script, Task, TaskLog, User, EnvironmentVariable, Session, ScriptFile
-import sqlalchemy as sa
 import subprocess
 import threading
 import croniter
-import json
-import sys
 from typing_extensions import Annotated
 from scheduler import init_scheduler, add_job, remove_job, shutdown_scheduler, running_tasks, env_vars
 from contextlib import asynccontextmanager
 
 from passlib.context import CryptContext
+from models import SessionLocal, Script, Task, TaskLog, User, EnvironmentVariable, Session, ScriptFile
 
 # 创建密码哈希的上下文
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # 定义当前版本
-CURRENT_VERSION = "1.0.7"
+CURRENT_VERSION = "1.0.8"
 
 # 创建必要的目录
 os.makedirs("static", exist_ok=True)
@@ -109,18 +111,13 @@ def get_db():
     finally:
         db.close()
 
-def get_current_user(request: Request, db: SessionLocal = Depends(get_db)) -> Optional[str]:
+def get_current_user(request: Request, db = Depends(get_db)) -> Optional[str]:
     session_id = request.cookies.get("session_id")
     if session_id:
-        # 在数据库中查找会话
         session = db.query(Session).filter(Session.id == session_id).first()
         if session and datetime.now() < session.expires:
-            # 更新会话的活动过期时间（可选）
-            session.expires = datetime.now() + timedelta(days=7)
-            db.commit()
             return session.username
         elif session:
-            # 会话已过期，从数据库中删除
             db.delete(session)
             db.commit()
     return None
@@ -134,7 +131,7 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 @app.get("/", response_class=HTMLResponse)
-async def root(request: Request, db: SessionLocal = Depends(get_db)):
+async def root(request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if user:
         # 获取 Python 版本
@@ -164,7 +161,7 @@ async def root(request: Request, db: SessionLocal = Depends(get_db)):
     )
 
 @app.post("/login")
-async def login(request: Request, db: SessionLocal = Depends(get_db)):
+async def login(request: Request, db=Depends(get_db)):
     form_data = await request.form()
     username = form_data.get("username")
     password = form_data.get("password")
@@ -201,7 +198,7 @@ async def login(request: Request, db: SessionLocal = Depends(get_db)):
     )
 
 @app.get("/logout")
-async def logout(request: Request, db: SessionLocal = Depends(get_db)):
+async def logout(request: Request, db=Depends(get_db)):
     session_id = request.cookies.get("session_id")
     if session_id:
         # 从数据库中删除会话
@@ -216,7 +213,7 @@ async def logout(request: Request, db: SessionLocal = Depends(get_db)):
 
 # 系统设置
 @app.get("/settings", response_class=HTMLResponse)
-async def settings_page(request: Request, db: SessionLocal = Depends(get_db)):
+async def settings_page(request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
@@ -238,7 +235,7 @@ async def settings_page(request: Request, db: SessionLocal = Depends(get_db)):
     )
 
 @app.post("/settings")
-async def update_settings(request: Request, db: SessionLocal = Depends(get_db)):
+async def update_settings(request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
          raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
@@ -314,7 +311,7 @@ async def update_settings(request: Request, db: SessionLocal = Depends(get_db)):
 
 # 环境变量管理
 @app.get("/env", response_class=HTMLResponse)
-async def list_env_vars(request: Request, db: SessionLocal = Depends(get_db)):
+async def list_env_vars(request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
@@ -334,7 +331,7 @@ async def list_env_vars(request: Request, db: SessionLocal = Depends(get_db)):
     )
 
 @app.post("/env")
-async def set_env_var(request: Request, db: SessionLocal = Depends(get_db)):
+async def set_env_var(request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
@@ -365,7 +362,7 @@ async def set_env_var(request: Request, db: SessionLocal = Depends(get_db)):
     return JSONResponse({"message": "环境变量已设置"})
 
 @app.get("/env/{key}")
-async def get_env_var(key: str, request: Request, db: SessionLocal = Depends(get_db)):
+async def get_env_var(key: str, request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
@@ -382,7 +379,7 @@ async def get_env_var(key: str, request: Request, db: SessionLocal = Depends(get
     }
 
 @app.delete("/env/{key}")
-async def delete_env_var(key: str, request: Request, db: SessionLocal = Depends(get_db)):
+async def delete_env_var(key: str, request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
@@ -402,7 +399,7 @@ async def delete_env_var(key: str, request: Request, db: SessionLocal = Depends(
 
 # 包管理
 @app.get("/packages", response_class=HTMLResponse)
-async def list_packages(request: Request, db: SessionLocal = Depends(get_db)):
+async def list_packages(request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
@@ -416,7 +413,7 @@ async def list_packages(request: Request, db: SessionLocal = Depends(get_db)):
     )
 
 @app.get("/api/packages")
-async def search_packages(request: Request, search: str = "", db: SessionLocal = Depends(get_db)):
+async def search_packages(request: Request, search: str = "", db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
@@ -450,7 +447,7 @@ async def search_packages(request: Request, search: str = "", db: SessionLocal =
         return {"packages": [], "package_count": 0}
 
 @app.post("/packages")
-async def install_package(request: Request, db: SessionLocal = Depends(get_db)):
+async def install_package(request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
@@ -485,7 +482,7 @@ async def install_package(request: Request, db: SessionLocal = Depends(get_db)):
 
 # 日志管理
 @app.get("/logs", response_class=HTMLResponse)
-async def list_logs(request: Request, db: SessionLocal = Depends(get_db), task_id: Optional[int] = None, page: int = 1, per_page: int = 15, only_errors: Optional[str] = None):
+async def list_logs(request: Request, db=Depends(get_db), task_id: Optional[int] = None, page: int = 1, per_page: int = 15, only_errors: Optional[str] = None):
     user = get_current_user(request, db=db)
     if not user:
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
@@ -533,7 +530,7 @@ async def list_logs(request: Request, db: SessionLocal = Depends(get_db), task_i
         db.close()
 
 @app.get("/logs/{log_id}")
-async def get_log_details(log_id: int, request: Request, db: SessionLocal = Depends(get_db)):
+async def get_log_details(log_id: int, request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         raise HTTPException(
@@ -557,7 +554,7 @@ async def get_log_details(log_id: int, request: Request, db: SessionLocal = Depe
         db.close()
 
 @app.delete("/logs/{log_id}")
-async def delete_log(log_id: int, request: Request, db: SessionLocal = Depends(get_db)):
+async def delete_log(log_id: int, request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         raise HTTPException(status_code=401, detail="未登录")
@@ -573,7 +570,7 @@ async def delete_log(log_id: int, request: Request, db: SessionLocal = Depends(g
     return {"message": "日志已删除"}
 
 @app.delete("/logs")
-async def clear_logs(request: Request, db: SessionLocal = Depends(get_db)):
+async def clear_logs(request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         raise HTTPException(
@@ -591,7 +588,7 @@ async def clear_logs(request: Request, db: SessionLocal = Depends(get_db)):
 
 # 脚本管理相关路由
 @app.get("/scripts", response_class=HTMLResponse)
-async def list_scripts(request: Request, db: SessionLocal = Depends(get_db)):
+async def list_scripts(request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
@@ -607,7 +604,7 @@ async def upload_script(
     request: Request,
     name: Annotated[str, Form(...)],
     file: Annotated[UploadFile, File(...)],
-    db: Annotated[SessionLocal, Depends(get_db)],
+    db=Depends(get_db),
     description: Annotated[Optional[str], Form()] = None,
 ):
     user = get_current_user(request, db=db)
@@ -634,7 +631,7 @@ async def upload_script(
     return JSONResponse({"message": "脚本上传成功"})
 
 @app.get("/scripts/{script_id}/edit", response_class=HTMLResponse)
-async def edit_script(script_id: int, request: Request, db: SessionLocal = Depends(get_db)):
+async def edit_script(script_id: int, request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
@@ -665,7 +662,7 @@ async def update_script(
     content: str = Form(...),
     filename: str = Form(...),
     description: str = Form(...),
-    db: SessionLocal = Depends(get_db)
+    db=Depends(get_db)
 ):
     user = get_current_user(request, db=db)
     if not user:
@@ -710,7 +707,7 @@ async def create_script(
     filename: str = Form(...),
     description: Annotated[Optional[str], Form()] = None,
     content: str = Form(...),
-    db: SessionLocal = Depends(get_db)
+    db=Depends(get_db)
 ):
     user = get_current_user(request, db=db)
     if not user:
@@ -742,7 +739,7 @@ async def create_script(
     return JSONResponse({"message": "脚本创建成功"})
 
 @app.delete("/scripts/{script_id}")
-async def delete_script(script_id: int, request: Request, db: SessionLocal = Depends(get_db)):
+async def delete_script(script_id: int, request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
@@ -792,7 +789,7 @@ async def delete_script(script_id: int, request: Request, db: SessionLocal = Dep
     return JSONResponse({"message": "脚本删除成功"})
 
 @app.get("/scripts/{script_id}/export")
-async def export_script(script_id: int, request: Request, db: SessionLocal = Depends(get_db)):
+async def export_script(script_id: int, request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
@@ -809,7 +806,7 @@ async def export_script(script_id: int, request: Request, db: SessionLocal = Dep
 
 # 脚本关联文件相关路由
 @app.get("/api/scripts/{script_id}/files")
-async def list_script_files(script_id: int, request: Request, db: SessionLocal = Depends(get_db)):
+async def list_script_files(script_id: int, request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
@@ -829,7 +826,7 @@ async def upload_script_file(
     files: List[UploadFile] = File(...), # 修改为接收文件列表
     description: Optional[str] = Form(None),
     request: Request = Request,
-    db: SessionLocal = Depends(get_db)
+    db=Depends(get_db)
 ):
     user = get_current_user(request, db=db)
     if not user:
@@ -899,7 +896,7 @@ async def upload_script_file(
         return JSONResponse({"message": "所有文件上传成功", "uploaded": uploaded_files_info})
 
 @app.get("/api/script-files/{file_id}")
-async def get_script_file_details(file_id: int, request: Request, db: SessionLocal = Depends(get_db)):
+async def get_script_file_details(file_id: int, request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
@@ -919,7 +916,7 @@ async def get_script_file_details(file_id: int, request: Request, db: SessionLoc
     }
 
 @app.get("/api/script-files/{file_id}/content")
-async def get_script_file_content(file_id: int, request: Request, db: SessionLocal = Depends(get_db)):
+async def get_script_file_content(file_id: int, request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
@@ -955,7 +952,7 @@ async def update_script_file(
     file_id: int,
     request_body: UpdateScriptFileRequest,
     request: Request,
-    db: SessionLocal = Depends(get_db)
+    db=Depends(get_db)
 ):
     user = get_current_user(request, db=db)
     if not user:
@@ -987,7 +984,7 @@ async def update_script_file(
     return JSONResponse({"message": "文件更新成功"})
 
 @app.get("/api/script-files/{file_id}/download")
-async def download_script_file(file_id: int, request: Request, db: SessionLocal = Depends(get_db)):
+async def download_script_file(file_id: int, request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
@@ -1010,7 +1007,7 @@ async def download_script_file(file_id: int, request: Request, db: SessionLocal 
     )
 
 @app.delete("/api/script-files/{file_id}")
-async def delete_script_file(file_id: int, request: Request, db: SessionLocal = Depends(get_db)):
+async def delete_script_file(file_id: int, request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
@@ -1036,7 +1033,7 @@ async def delete_script_file(file_id: int, request: Request, db: SessionLocal = 
 
 # 任务调度相关路由
 @app.get("/tasks", response_class=HTMLResponse)
-async def list_tasks(request: Request, db: SessionLocal = Depends(get_db)):
+async def list_tasks(request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
@@ -1095,7 +1092,7 @@ async def list_tasks(request: Request, db: SessionLocal = Depends(get_db)):
 @app.post("/tasks")
 async def create_task(
     request: Request,
-    db: SessionLocal = Depends(get_db)
+    db=Depends(get_db)
 ):
     user = get_current_user(request, db=db)
     if not user:
@@ -1139,7 +1136,7 @@ async def create_task(
     return JSONResponse({"message": "任务创建成功"})
 
 @app.get("/api/tasks/{task_id}")
-async def get_task(task_id: int, request: Request, db: SessionLocal = Depends(get_db)):
+async def get_task(task_id: int, request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
@@ -1164,7 +1161,7 @@ async def get_task(task_id: int, request: Request, db: SessionLocal = Depends(ge
 async def update_task(
     task_id: int,
     request: Request,
-    db: SessionLocal = Depends(get_db)
+    db=Depends(get_db)
 ):
     user = get_current_user(request, db=db)
     if not user:
@@ -1213,7 +1210,7 @@ async def update_task(
 async def toggle_task(
     task_id: int,
     request: Request,
-    db: SessionLocal = Depends(get_db)
+    db=Depends(get_db)
 ):
     user = get_current_user(request, db=db)
     if not user:
@@ -1241,7 +1238,7 @@ async def toggle_task(
 async def run_task(
     task_id: int,
     request: Request,
-    db: SessionLocal = Depends(get_db)
+    db=Depends(get_db)
 ):
     user = get_current_user(request, db=db)
     if not user:
@@ -1330,10 +1327,10 @@ async def run_task(
     thread.start()
     running_tasks[task_id] = thread
 
-    return JSONResponse({"message": "任务已开始运行"})
+    return JSONResponse({"message": "任务已提交运行"})
 
 @app.delete("/tasks/{task_id}")
-async def delete_task(task_id: int, request: Request, db: SessionLocal = Depends(get_db)):
+async def delete_task(task_id: int, request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
@@ -1359,7 +1356,7 @@ async def delete_task(task_id: int, request: Request, db: SessionLocal = Depends
     return JSONResponse({"message": "任务已删除"})
 
 @app.get("/tasks/{task_id}/latest-log")
-async def get_task_latest_log(task_id: int, request: Request, db: SessionLocal = Depends(get_db)):
+async def get_task_latest_log(task_id: int, request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未授权")
@@ -1393,7 +1390,7 @@ async def get_task_latest_log(task_id: int, request: Request, db: SessionLocal =
     }
 
 @app.get("/tasks/{task_id}/edit", response_class=HTMLResponse)
-async def edit_task(task_id: int, request: Request, db: SessionLocal = Depends(get_db)):
+async def edit_task(task_id: int, request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
@@ -1416,7 +1413,7 @@ async def edit_task(task_id: int, request: Request, db: SessionLocal = Depends(g
 
 # 关于页面路由
 @app.get("/about", response_class=HTMLResponse)
-async def about_page(request: Request, db: SessionLocal = Depends(get_db)):
+async def about_page(request: Request, db=Depends(get_db)):
     user = get_current_user(request, db=db)
     if not user:
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
@@ -1430,5 +1427,323 @@ async def about_page(request: Request, db: SessionLocal = Depends(get_db)):
         }
     )
 
+@app.get("/settings/backup/export")
+async def export_backup(request: Request, db=Depends(get_db)):
+    user = get_current_user(request, db=db)
+    if not user:
+        return RedirectResponse(url="/", status_code=302)
+    scripts_dir = os.path.abspath("scripts")
+    temp_dir = tempfile.mkdtemp()
+    scripts_tar = os.path.join(temp_dir, "scripts.tar.gz")
+    with tarfile.open(scripts_tar, "w:gz") as tar:
+        tar.add(scripts_dir, arcname="scripts")
+    scripts = db.query(Script).all()
+    scripts_data = [
+        {k: getattr(s, k) for k in ["id", "name", "filename", "description", "created_at", "updated_at"]}
+        for s in scripts
+    ]
+    tasks = db.query(Task).all()
+    tasks_data = [
+        {k: getattr(t, k) for k in ["id", "name", "description", "script_id", "cron_expression", "is_active", "created_at", "last_run_at", "next_run_at"]}
+        for t in tasks
+    ]
+    logs = db.query(TaskLog).all()
+    logs_data = [
+        {k: getattr(l, k) for k in ["id", "task_id", "status", "output", "error", "started_at", "finished_at"]}
+        for l in logs
+    ]
+    script_files = db.query(ScriptFile).all()
+    script_files_data = [
+        {k: getattr(f, k) for k in ["id", "script_id", "filename", "original_filename", "file_type", "description", "created_at"]}
+        for f in script_files
+    ]
+    env_vars = db.query(EnvironmentVariable).all()
+    env_vars_data = [
+        {k: getattr(e, k) for k in ["id", "key", "value", "created_at"]}
+        for e in env_vars
+    ]
+    db_json = {
+        "scripts": scripts_data,
+        "tasks": tasks_data,
+        "logs": logs_data,
+        "script_files": script_files_data,
+        "env_vars": env_vars_data
+    }
+    db_json_path = os.path.join(temp_dir, "db_data.json")
+    with open(db_json_path, "w", encoding="utf-8") as f:
+        json.dump(db_json, f, ensure_ascii=False, default=str, indent=2)
+    final_tar_path = os.path.join(temp_dir, "beeline_backup.tar.gz")
+    with tarfile.open(final_tar_path, "w:gz") as tar:
+        tar.add(scripts_tar, arcname="scripts.tar.gz")
+        tar.add(db_json_path, arcname="db_data.json")
+    with open(final_tar_path, "rb") as f:
+        data = f.read()
+    shutil.rmtree(temp_dir)
+    return Response(data, media_type="application/gzip", headers={
+        "Content-Disposition": "attachment; filename=beeline_backup.tar.gz"
+    })
+
+@app.post("/settings/backup/import")
+async def import_backup(request: Request, db=Depends(get_db), backup_file: UploadFile = File(...)):
+    user = get_current_user(request, db=db)
+    if not user:
+        return JSONResponse({"error": "未登录或会话失效"}, status_code=401)
+    temp_dir = tempfile.mkdtemp()
+    backup_path = os.path.join(temp_dir, "imported_backup.tar.gz")
+    with open(backup_path, "wb") as f:
+        f.write(await backup_file.read())
+    with tarfile.open(backup_path, "r:gz") as tar:
+        tar.extractall(temp_dir)
+    scripts_tar_path = os.path.join(temp_dir, "scripts.tar.gz")
+    scripts_extract_dir = os.path.join(temp_dir, "scripts")
+    if os.path.exists(scripts_tar_path):
+        with tarfile.open(scripts_tar_path, "r:gz") as tar:
+            tar.extractall(temp_dir)
+    scripts_dir = os.path.abspath("scripts")
+    if os.path.exists(os.path.join(temp_dir, "scripts")):
+        for filename in os.listdir(scripts_dir):
+            file_path = os.path.join(scripts_dir, filename)
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        for filename in os.listdir(os.path.join(temp_dir, "scripts")):
+            src = os.path.join(temp_dir, "scripts", filename)
+            dst = os.path.join(scripts_dir, filename)
+            if os.path.isdir(src):
+                shutil.copytree(src, dst)
+            else:
+                shutil.copy2(src, dst)
+    db_json_path = os.path.join(temp_dir, "db_data.json")
+    def parse_dt(val):
+        if val is None:
+            return None
+        if isinstance(val, str):
+            try:
+                return datetime.fromisoformat(val)
+            except Exception:
+                try:
+                    return datetime.strptime(val, "%Y-%m-%d %H:%M:%S.%f")
+                except Exception:
+                    try:
+                        return datetime.strptime(val, "%Y-%m-%d %H:%M:%S")
+                    except Exception:
+                        return None
+        return val
+    if os.path.exists(db_json_path):
+        with open(db_json_path, "r", encoding="utf-8") as f:
+            db_json = json.load(f)
+        db.query(TaskLog).delete()
+        db.query(Task).delete()
+        db.query(ScriptFile).delete()
+        db.query(Script).delete()
+        db.query(EnvironmentVariable).delete()
+        db.commit()
+        # 脚本
+        for s in db_json.get("scripts", []):
+            for k in ("created_at", "updated_at"):
+                if k in s:
+                    s[k] = parse_dt(s[k])
+            db.add(Script(**s))
+        db.commit()
+        # 脚本文件
+        for f_ in db_json.get("script_files", []):
+            for k in ("created_at", ):
+                if k in f_:
+                    f_[k] = parse_dt(f_[k])
+            db.add(ScriptFile(**f_))
+        db.commit()
+        # 任务
+        for t in db_json.get("tasks", []):
+            for k in ("created_at", "last_run_at", "next_run_at"):
+                if k in t:
+                    t[k] = parse_dt(t[k])
+            db.add(Task(**t))
+        db.commit()
+        # 日志
+        for l in db_json.get("logs", []):
+            for k in ("started_at", "finished_at"):
+                if k in l:
+                    l[k] = parse_dt(l[k])
+            db.add(TaskLog(**l))
+        db.commit()
+        # 环境变量
+        for e in db_json.get("env_vars", []):
+            for k in ("created_at", ):
+                if k in e:
+                    e[k] = parse_dt(e[k])
+            db.add(EnvironmentVariable(**e))
+        db.commit()
+    shutil.rmtree(temp_dir)
+    return JSONResponse({"message": "导入成功"})
+
+@app.get("/filemanager", response_class=HTMLResponse)
+async def filemanager_page(request: Request, db=Depends(get_db)):
+    user = get_current_user(request, db=db)
+    if not user:
+        return RedirectResponse(url="/", status_code=302)
+    return templates.TemplateResponse(
+        "filemanager.html",
+        {"request": request, "username": user}
+    )
+
+# 文件管理API
+import mimetypes
+
+def get_file_tree(root):
+    tree = []
+    for entry in sorted(os.scandir(root), key=lambda e: (not e.is_dir(), e.name.lower())):
+        stat = entry.stat()
+        item = {
+            "name": entry.name,
+            "type": "dir" if entry.is_dir() else "file",
+            "size": stat.st_size if not entry.is_dir() else None,  # 返回真实字节数
+            "mtime": datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M'),
+        }
+        if entry.is_dir():
+            item["children"] = get_file_tree(entry.path)
+        else:
+            ext = os.path.splitext(entry.name)[-1][1:].lower()
+            item["ext"] = ext
+            item["is_text"] = ext in ["txt", "py", "md", "json", "yaml", "yml", "csv", "log", "ini", "conf", "xml", "html", "js", "css"]
+        tree.append(item)
+    return tree
+
+@app.get("/api/filemanager/tree")
+async def api_file_tree(request: Request, db=Depends(get_db)):
+    user = get_current_user(request, db=db)
+    if not user:
+        return JSONResponse({"error": "未登录"}, status_code=401)
+    root = os.path.abspath("scripts")
+    return get_file_tree(root)
+
+@app.get("/api/filemanager/file")
+async def api_get_file(request: Request, path: str, db=Depends(get_db)):
+    user = get_current_user(request, db=db)
+    if not user:
+        return JSONResponse({"error": "未登录"}, status_code=401)
+    abs_path = os.path.abspath(os.path.join("scripts", path))
+    if not abs_path.startswith(os.path.abspath("scripts")) or not os.path.isfile(abs_path):
+        return JSONResponse({"error": "无效路径"}, status_code=400)
+    with open(abs_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    return {"content": content}
+
+@app.post("/api/filemanager/file")
+async def api_save_file(request: Request, path: str, db=Depends(get_db)):
+    user = get_current_user(request, db=db)
+    if not user:
+        return JSONResponse({"error": "未登录"}, status_code=401)
+    abs_path = os.path.abspath(os.path.join("scripts", path))
+    if not abs_path.startswith(os.path.abspath("scripts")) or not os.path.isfile(abs_path):
+        return JSONResponse({"error": "无效路径"}, status_code=400)
+    data = await request.json()
+    with open(abs_path, "w", encoding="utf-8") as f:
+        f.write(data.get("content", ""))
+    return {"message": "保存成功"}
+
+@app.get("/api/filemanager/download")
+async def api_download_file(request: Request, path: str, db=Depends(get_db)):
+    user = get_current_user(request, db=db)
+    if not user:
+        return JSONResponse({"error": "未登录"}, status_code=401)
+    abs_path = os.path.abspath(os.path.join("scripts", path))
+    if not abs_path.startswith(os.path.abspath("scripts")) or not os.path.isfile(abs_path):
+        return JSONResponse({"error": "无效路径"}, status_code=400)
+    filename = os.path.basename(abs_path)
+    mime, _ = mimetypes.guess_type(abs_path)
+    return FileResponse(abs_path, filename=filename, media_type=mime or 'application/octet-stream')
+
+@app.post("/api/filemanager/upload")
+async def api_upload_file(request: Request, file: UploadFile = File(...), db=Depends(get_db)):
+    user = get_current_user(request, db=db)
+    if not user:
+        return JSONResponse({"error": "未登录"}, status_code=401)
+    form = await request.form()
+    target_folder = form.get("target_folder", "").strip()
+    # 兼容根目录和子目录
+    save_dir = os.path.join("scripts", target_folder) if target_folder else "scripts"
+    os.makedirs(save_dir, exist_ok=True)
+    save_path = os.path.join(save_dir, file.filename)
+    abs_path = os.path.abspath(save_path)
+    if not abs_path.startswith(os.path.abspath("scripts")):
+        return JSONResponse({"error": "无效路径"}, status_code=400)
+    with open(abs_path, "wb") as f:
+        f.write(await file.read())
+    return {"message": "上传成功"}
+
+@app.post("/api/filemanager/upload-folder")
+async def api_upload_folder(request: Request, files: list[UploadFile] = File(...), db=Depends(get_db)):
+    user = get_current_user(request, db=db)
+    if not user:
+        return JSONResponse({"error": "未登录"}, status_code=401)
+    for file in files:
+        rel_path = file.filename.replace("..", "_") # 防止目录穿越
+        save_path = os.path.join("scripts", rel_path)
+        abs_path = os.path.abspath(save_path)
+        if not abs_path.startswith(os.path.abspath("scripts")):
+            continue
+        os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+        with open(abs_path, "wb") as f:
+            f.write(await file.read())
+    return {"message": "上传成功"}
+
+@app.post("/api/filemanager/create_folder")
+async def api_create_folder(request: Request, db=Depends(get_db)):
+    user = get_current_user(request, db=db)
+    if not user:
+        return JSONResponse({"error": "未登录"}, status_code=401)
+    data = await request.json()
+    foldername = data.get("foldername", "").strip()
+    if not foldername or any(x in foldername for x in '/\\'):
+        return JSONResponse({"error": "文件夹名不合法"}, status_code=400)
+    abs_path = os.path.abspath(os.path.join("scripts", foldername))
+    if not abs_path.startswith(os.path.abspath("scripts")):
+        return JSONResponse({"error": "无效路径"}, status_code=400)
+    os.makedirs(abs_path, exist_ok=True)
+    return {"message": "创建成功"}
+
+@app.post("/api/filemanager/delete")
+async def api_delete_entry(request: Request, db=Depends(get_db)):
+    user = get_current_user(request, db=db)
+    if not user:
+        return JSONResponse({"error": "未登录"}, status_code=401)
+    data = await request.json()
+    rel_path = data.get("path", "").strip()
+    is_dir = data.get("is_dir", False)
+    abs_path = os.path.abspath(os.path.join("scripts", rel_path))
+    if not abs_path.startswith(os.path.abspath("scripts")) or not os.path.exists(abs_path):
+        return JSONResponse({"error": "无效路径"}, status_code=400)
+    try:
+        if is_dir:
+            shutil.rmtree(abs_path)
+        else:
+            os.remove(abs_path)
+        return {"message": "删除成功"}
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.post("/api/filemanager/rename")
+async def api_rename_entry(request: Request, db=Depends(get_db)):
+    user = get_current_user(request, db=db)
+    if not user:
+        return JSONResponse({"error": "未登录"}, status_code=401)
+    data = await request.json()
+    rel_path = data.get("path", "").strip()
+    new_name = data.get("new_name", "").strip()
+    is_dir = data.get("is_dir", False)
+    if not new_name or any(x in new_name for x in '/\\'):
+        return JSONResponse({"error": "新名称不合法"}, status_code=400)
+    abs_path = os.path.abspath(os.path.join("scripts", rel_path))
+    if not abs_path.startswith(os.path.abspath("scripts")) or not os.path.exists(abs_path):
+        return JSONResponse({"error": "无效路径"}, status_code=400)
+    new_abs_path = os.path.join(os.path.dirname(abs_path), new_name)
+    if not new_abs_path.startswith(os.path.abspath("scripts")):
+        return JSONResponse({"error": "无效新路径"}, status_code=400)
+    try:
+        os.rename(abs_path, new_abs_path)
+        return {"message": "重命名成功"}
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False, reload_dirs=["templates", "static"])

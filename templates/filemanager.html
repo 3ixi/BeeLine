@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeeLine - 文件管理</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+</head>
+<body class="bg-gray-100">
+    <!-- 移动端顶部导航栏 -->
+    <div class="lg:hidden bg-white shadow-md">
+        <div class="flex items-center justify-between p-4">
+            <div class="flex items-center space-x-2">
+                <img src="/static/images/logo.jpg" alt="BeeLine Logo" class="h-8 w-8 object-cover">
+                <h1 class="text-xl font-bold text-gray-800">BeeLine</h1>
+            </div>
+            <button id="mobile-menu-button" class="text-gray-600 hover:text-gray-900">
+                <i class="fas fa-bars text-2xl"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- 移动端侧边栏 -->
+    <div id="mobile-menu" class="lg:hidden fixed inset-0 bg-gray-800 bg-opacity-50 z-40 hidden">
+        <div class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out -translate-x-full">
+            <div class="p-4 border-b">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <img src="/static/images/logo.jpg" alt="BeeLine Logo" class="h-8 w-8 object-cover">
+                        <h2 class="text-xl font-bold text-gray-800">菜单</h2>
+                    </div>
+                    <button id="close-menu" class="text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+                <p class="text-sm text-gray-600 mt-2">欢迎, {{ username }}</p>
+            </div>
+            <nav class="mt-4">
+                <a href="/" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-chart-line w-6"></i> 仪表盘
+                </a>
+                <a href="/scripts" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-code w-6"></i> 脚本管理
+                </a>
+                <a href="/tasks" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-clock w-6"></i> 任务调度
+                </a>
+                <a href="/filemanager" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900 bg-gray-100">
+                    <i class="fas fa-folder-open w-6"></i> 文件管理
+                </a>
+                <a href="/packages" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-box w-6"></i> 包管理
+                </a>
+                <a href="/env" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-cog w-6"></i> 环境变量
+                </a>
+                <a href="/logs" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-list w-6"></i> 运行日志
+                </a>
+                 <a href="/about" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-info-circle w-6"></i> 关于
+                </a>
+                 <a href="/settings" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-user-cog w-6"></i> 系统设置
+                </a>
+                <a href="/logout" class="block px-4 py-3 text-red-600 hover:bg-gray-100 hover:text-red-900">
+                    <i class="fas fa-sign-out-alt w-6"></i> 退出登录
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <div class="flex h-screen">
+        <!-- 桌面端侧边栏 -->
+        <div class="hidden lg:block w-64 bg-white shadow-lg">
+            <div class="p-4 border-b">
+                <div class="flex items-center space-x-2">
+                    <img src="/static/images/logo.jpg" alt="BeeLine Logo" class="h-8 w-8 object-cover">
+                    <h1 class="text-xl font-bold text-gray-800">BeeLine</h1>
+                </div>
+                <p class="text-sm text-gray-600">欢迎, {{ username }}</p>
+            </div>
+            <nav class="mt-4">
+                <a href="/" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-chart-line w-6"></i> 仪表盘
+                </a>
+                <a href="/scripts" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-code w-6"></i> 脚本管理
+                </a>
+                <a href="/tasks" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-clock w-6"></i> 任务调度
+                </a>
+                <a href="/filemanager" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900 bg-gray-100">
+                    <i class="fas fa-folder-open w-6"></i> 文件管理
+                </a>
+                <a href="/packages" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-box w-6"></i> 包管理
+                </a>
+                <a href="/env" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-cog w-6"></i> 环境变量
+                </a>
+                <a href="/logs" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-list w-6"></i> 运行日志
+                </a>
+                <a href="/about" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-info-circle w-6"></i> 关于
+                </a>
+                 <a href="/settings" class="block px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+                    <i class="fas fa-user-cog w-6"></i> 系统设置
+                </a>
+                <a href="/logout" class="block px-4 py-3 text-red-600 hover:bg-gray-100 hover:text-red-900">
+                    <i class="fas fa-sign-out-alt w-6"></i> 退出登录
+                </a>
+            </nav>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="flex-1 overflow-auto">
+            <div class="p-4 lg:p-8">
+                <div class="bg-white rounded-lg shadow-md p-4 lg:p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <!--<h2 class="text-xl lg:text-2xl font-bold">文件管理</h2>-->
+                        <div class="flex gap-2">
+                            <button id="upload-file-btn" class="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center"><i class="fas fa-upload mr-2"></i>上传文件</button>
+                            <button id="upload-folder-btn" class="px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 flex items-center"><i class="fas fa-folder-plus mr-2"></i>上传文件夹</button>
+                            <button id="create-folder-btn" class="px-3 py-1.5 bg-gray-600 text-white rounded hover:bg-gray-700 flex items-center"><i class="fas fa-folder-plus mr-2"></i>新建文件夹</button>
+                        </div>
+                    </div>
+                    <div id="file-tree-container" class="overflow-x-auto">
+                        <!-- 文件树区域 -->
+                        <div id="file-tree"></div>
+                        <!-- 全局唯一 tooltip 容器 -->
+                        <div id="global-tooltip" class="pointer-events-none fixed z-50 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 transition-opacity duration-200 whitespace-nowrap shadow-lg"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 文件编辑模态框 -->
+    <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6 relative">
+            <button id="close-edit-modal" class="absolute top-3 right-3 text-gray-400 hover:text-gray-700"><i class="fas fa-times text-xl"></i></button>
+            <h3 class="text-lg font-semibold mb-4 flex items-center"><i class="fas fa-file-alt text-blue-500 mr-2"></i>编辑文件：<span id="edit-filename" class="ml-2 font-mono text-sm"></span></h3>
+            <textarea id="edit-content" class="w-full h-72 border rounded p-2 font-mono text-sm bg-gray-50"></textarea>
+            <div class="flex justify-end mt-4">
+                <button id="save-edit-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 上传文件模态框 -->
+    <div id="upload-file-modal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
+            <button id="close-upload-file-modal" class="absolute top-3 right-3 text-gray-400 hover:text-gray-700"><i class="fas fa-times text-xl"></i></button>
+            <h3 class="text-lg font-semibold mb-4 flex items-center"><i class="fas fa-upload text-blue-500 mr-2"></i>上传文件</h3>
+            <form id="upload-file-form">
+                <input type="file" name="file" class="mb-4" required />
+                <div class="flex justify-end">
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">上传</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- 上传文件夹模态框 -->
+    <div id="upload-folder-modal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
+            <button id="close-upload-folder-modal" class="absolute top-3 right-3 text-gray-400 hover:text-gray-700"><i class="fas fa-times text-xl"></i></button>
+            <h3 class="text-lg font-semibold mb-4 flex items-center"><i class="fas fa-folder-plus text-green-500 mr-2"></i>上传文件夹</h3>
+            <form id="upload-folder-form">
+                <input type="file" name="folder" webkitdirectory directory multiple class="mb-4" required />
+                <div class="flex justify-end">
+                    <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">上传</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- 新建文件夹模态框 -->
+    <div id="create-folder-modal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
+            <button id="close-create-folder-modal" class="absolute top-3 right-3 text-gray-400 hover:text-gray-700"><i class="fas fa-times text-xl"></i></button>
+            <h3 class="text-lg font-semibold mb-4 flex items-center"><i class="fas fa-folder-plus text-gray-600 mr-2"></i>新建文件夹</h3>
+            <form id="create-folder-form">
+                <input type="text" name="foldername" placeholder="请输入文件夹名称" class="mb-4 w-full border rounded p-2" required />
+                <div class="flex justify-end">
+                    <button type="submit" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">创建</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Toast 提示功能
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            toastMessage.textContent = message;
+            toast.classList.remove('translate-y-full', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-full', 'opacity-0');
+            }, 3000);
+        }
+
+        // 移动端菜单控制
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const closeMenuButton = document.getElementById('close-menu');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const mobileMenuContent = mobileMenu.querySelector('div');
+
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.remove('hidden');
+            setTimeout(() => {
+                mobileMenuContent.classList.remove('-translate-x-full');
+            }, 10);
+        });
+
+        closeMenuButton.addEventListener('click', () => {
+            mobileMenuContent.classList.add('-translate-x-full');
+            setTimeout(() => {
+                mobileMenu.classList.add('hidden');
+            }, 300);
+        });
+
+        // 点击菜单外部关闭菜单
+        mobileMenu.addEventListener('click', (e) => {
+            if (e.target === mobileMenu) {
+                mobileMenuContent.classList.add('-translate-x-full');
+                setTimeout(() => {
+                    mobileMenu.classList.add('hidden');
+                }, 300);
+            }
+        });
+
+
+        // 文件大小格式化（支持真实字节数）
+        function formatSize(size) {
+            if (typeof size !== 'number' || isNaN(size)) return '-';
+            if (size < 1024) return size + ' B';
+            if (size < 1024 * 1024) return (size / 1024).toFixed(1).replace(/\.0$/, '') + ' KB';
+            if (size < 1024 * 1024 * 1024) return (size / 1024 / 1024).toFixed(1).replace(/\.0$/, '') + ' MB';
+            return (size / 1024 / 1024 / 1024).toFixed(1).replace(/\.0$/, '') + ' GB';
+        }
+        function renderTree(node, parentPath, level = 0) {
+            if (!node) return '';
+            let html = '';
+            for (const item of node) {
+                const fullPath = parentPath ? parentPath + '/' + item.name : item.name;
+                const indent = `pl-${Math.min(level * 4, 12)}`;
+                let opBtns = '';
+                if (item.type === 'dir') {
+                    opBtns = `
+                        <div class='flex items-center space-x-2 justify-end'>
+                            <button class="op-btn text-blue-600 hover:text-blue-900" data-tip="重命名" onclick="renameEntry('${fullPath}', true)"><i class="fas fa-edit"></i></button>
+                            <button class="op-btn text-red-600 hover:text-red-900" data-tip="删除" onclick="deleteEntry('${fullPath}', true)"><i class="fas fa-trash"></i></button>
+                        </div>`;
+                    html += `<tr class="border-b hover:bg-gray-50">
+                        <td class="py-1 px-2 flex items-center ${indent}"><i class="fas fa-folder text-yellow-500 mr-2"></i><span class="font-semibold">${item.name}</span></td>
+                        <td class="py-1 px-2 text-gray-400">文件夹</td>
+                        <td class="py-1 px-2 text-gray-400">-</td>
+                        <td class="py-1 px-2 text-gray-400">${item.mtime}</td>
+                        <td class="py-1 px-2 text-right">${opBtns}</td>
+                    </tr>`;
+                    if (item.children && item.children.length) {
+                        html += renderTree(item.children, fullPath, level + 1);
+                    }
+                } else {
+                    // 判断是否为python脚本
+                    const isPython = (item.ext || '').toLowerCase() === 'py';
+                    opBtns = `
+                        <div class='flex items-center space-x-2 justify-end'>
+                            <button class="op-btn text-blue-600 hover:text-blue-900" data-tip="下载" onclick="downloadFile('${fullPath}')"><i class='fas fa-download'></i></button>
+                            ${item.is_text ? `<button class="op-btn text-green-600 hover:text-green-900" data-tip="编辑" onclick="editFile('${fullPath}')"><i class="fas fa-edit"></i></button>` : ''}
+                            <button class="op-btn text-blue-600 hover:text-blue-900" data-tip="重命名" onclick="renameEntry('${fullPath}', false)"><i class="fas fa-i-cursor"></i></button>
+                            <button class="op-btn text-red-600 hover:text-red-900" data-tip="删除" onclick="deleteEntry('${fullPath}', false)"><i class="fas fa-trash"></i></button>
+                        </div>`;
+                    let sizeStr = formatSize(Number(item.size) || 0);
+                    html += `<tr class="border-b hover:bg-gray-50">
+                        <td class="py-1 px-2 flex items-center ${indent}">`
+                        + (isPython
+                            ? `<i class='fab fa-python text-blue-500 mr-2'></i>`
+                            : `<i class="fas fa-file text-gray-400 mr-2"></i>`)
+                        + `<span class="font-mono">${item.name}</span></td>
+                        <td class="py-1 px-2 text-gray-400">.${item.ext || '未知'}</td>
+                        <td class="py-1 px-2 text-gray-400">${sizeStr}</td>
+                        <td class="py-1 px-2 text-gray-400">${item.mtime}</td>
+                        <td class="py-1 px-2 text-right">${opBtns}</td>
+                    </tr>`;
+                }
+            }
+            return html;
+        }
+        // 重写loadFileTree，表头只渲染一次，表格不自动换行
+        async function loadFileTree() {
+            const resp = await fetch('/api/filemanager/tree');
+            const data = await resp.json();
+            document.getElementById('file-tree').innerHTML = `<div class='w-full overflow-x-auto'><table class='min-w-full text-sm text-left whitespace-nowrap'><thead><tr class='border-b text-gray-500'><th class='py-1 px-2 font-normal'>文件名</th><th class='py-1 px-2 font-normal'>类型</th><th class='py-1 px-2 font-normal'>大小</th><th class='py-1 px-2 font-normal'>修改时间</th><th class='py-1 px-2 font-normal text-right'>操作</th></tr></thead><tbody>${renderTree(data, '', 0)}</tbody></table></div>`;
+            bindOpBtnTooltips();
+        }
+        async function editFile(path) {
+            const resp = await fetch(`/api/filemanager/file?path=${encodeURIComponent(path)}`);
+            const data = await resp.json();
+            document.getElementById('edit-filename').textContent = path;
+            document.getElementById('edit-content').value = data.content;
+            document.getElementById('edit-modal').classList.remove('hidden');
+            document.getElementById('save-edit-btn').onclick = async function() {
+                const newContent = document.getElementById('edit-content').value;
+                const resp2 = await fetch(`/api/filemanager/file?path=${encodeURIComponent(path)}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: newContent })
+                });
+                if (resp2.ok) {
+                    alert('保存成功');
+                    document.getElementById('edit-modal').classList.add('hidden');
+                    loadFileTree();
+                } else {
+                    alert('保存失败');
+                }
+            };
+        }
+        function downloadFile(path) {
+            window.open(`/api/filemanager/download?path=${encodeURIComponent(path)}`);
+        }
+        document.getElementById('close-edit-modal').onclick = function() {
+            document.getElementById('edit-modal').classList.add('hidden');
+        };
+        // 模态框控制
+        document.getElementById('upload-file-btn').onclick = function() {
+            // 动态生成文件夹下拉框
+            showUploadFileModal();
+        };
+        document.getElementById('upload-folder-btn').onclick = function() {
+            document.getElementById('upload-folder-modal').classList.remove('hidden');
+        };
+        document.getElementById('create-folder-btn').onclick = function() {
+            document.getElementById('create-folder-modal').classList.remove('hidden');
+        };
+        // 关闭模态框
+        document.getElementById('close-upload-file-modal').onclick = function() {
+            document.getElementById('upload-file-modal').classList.add('hidden');
+            const sel = document.querySelector('#upload-file-form select[name=target_folder]');
+            if (sel) sel.remove();
+        };
+        document.getElementById('close-upload-folder-modal').onclick = function() {
+            document.getElementById('upload-folder-modal').classList.add('hidden');
+        };
+        document.getElementById('close-create-folder-modal').onclick = function() {
+            document.getElementById('create-folder-modal').classList.add('hidden');
+        };
+        // 上传文件
+        document.getElementById('upload-file-form').onsubmit = async function(e) {
+            e.preventDefault();
+            const form = e.target;
+            const formData = new FormData(form);
+            // 处理目标文件夹
+            const target = form.target_folder ? form.target_folder.value : '';
+            if (target) formData.append('target_folder', target);
+            const resp = await fetch('/api/filemanager/upload', {
+                method: 'POST',
+                body: formData
+            });
+            if (resp.ok) {
+                alert('上传成功');
+                document.getElementById('upload-file-modal').classList.add('hidden');
+                // 移除下拉框，防止重复
+                const sel = document.querySelector('#upload-file-form select[name=target_folder]');
+                if (sel) sel.remove();
+                loadFileTree();
+            } else {
+                alert('上传失败');
+            }
+        };
+        // 上传文件夹
+        document.getElementById('upload-folder-form').onsubmit = async function(e) {
+            e.preventDefault();
+            const form = e.target;
+            const files = form.folder.files;
+            if (!files.length) return alert('请选择文件夹');
+            const formData = new FormData();
+            for (const file of files) {
+                formData.append('files', file, file.webkitRelativePath);
+            }
+            const resp = await fetch('/api/filemanager/upload-folder', {
+                method: 'POST',
+                body: formData
+            });
+            if (resp.ok) {
+                alert('上传成功');
+                document.getElementById('upload-folder-modal').classList.add('hidden');
+                loadFileTree();
+            } else {
+                alert('上传失败');
+            }
+        };
+        // 新建文件夹
+        document.getElementById('create-folder-form').onsubmit = async function(e) {
+            e.preventDefault();
+            const form = e.target;
+            const foldername = form.foldername.value.trim();
+            if (!foldername) return alert('请输入文件夹名称');
+            const resp = await fetch('/api/filemanager/create_folder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ foldername })
+            });
+            if (resp.ok) {
+                alert('创建成功');
+                document.getElementById('create-folder-modal').classList.add('hidden');
+                loadFileTree();
+            } else {
+                alert('创建失败');
+            }
+        };
+        // 上传文件支持选择目标文件夹
+        async function showUploadFileModal() {
+            // 获取文件树
+            const resp = await fetch('/api/filemanager/tree');
+            const data = await resp.json();
+            const folders = getAllFolders(data);
+            let selectHtml = `<select name='target_folder' class='mb-4 w-full border rounded p-2'>`;
+            selectHtml += `<option value=''>/ (根目录)</option>`;
+            for (const f of folders) {
+                selectHtml += `<option value='${f.path}'>${'&nbsp;'.repeat(f.level * 4)}${f.name}</option>`;
+            }
+            selectHtml += `</select>`;
+            // 避免重复插入
+            const oldSel = document.querySelector('#upload-file-form select[name=target_folder]');
+            if (oldSel) oldSel.remove();
+            document.querySelector('#upload-file-form input[type=file]').insertAdjacentHTML('beforebegin', selectHtml);
+            document.getElementById('upload-file-modal').classList.remove('hidden');
+        }
+        // 递归获取所有文件夹
+        function getAllFolders(node, parentPath = '', arr = [], level = 0) {
+            for (const item of node) {
+                const fullPath = parentPath ? parentPath + '/' + item.name : item.name;
+                if (item.type === 'dir') {
+                    arr.push({ path: fullPath, name: fullPath, level });
+                    if (item.children && item.children.length) getAllFolders(item.children, fullPath, arr, level + 1);
+                }
+            }
+            return arr;
+        }
+        // 页面加载时加载文件树
+        loadFileTree();
+        // 删除文件/文件夹
+        async function deleteEntry(path, isDir) {
+            if (!confirm(`确定要删除${isDir ? '文件夹' : '文件'}“${path}”吗？`)) return;
+            const resp = await fetch('/api/filemanager/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path, is_dir: isDir })
+            });
+            if (resp.ok) {
+                alert('删除成功');
+                loadFileTree();
+            } else {
+                alert('删除失败');
+            }
+        }
+        // 重命名文件/文件夹
+        async function renameEntry(path, isDir) {
+            const newName = prompt(`请输入新的${isDir ? '文件夹' : '文件'}名称：`, path.split('/').pop());
+            if (!newName || newName === path.split('/').pop()) return;
+            const resp = await fetch('/api/filemanager/rename', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path, new_name: newName, is_dir: isDir })
+            });
+            if (resp.ok) {
+                alert('重命名成功');
+                loadFileTree();
+            } else {
+                alert('重命名失败');
+            }
+        }
+        // tooltip 逻辑
+        function showTooltip(e) {
+            const tip = e.currentTarget.getAttribute('data-tip');
+            if (!tip) return;
+            const tooltip = document.getElementById('global-tooltip');
+            tooltip.textContent = tip;
+            tooltip.style.opacity = '1';
+            // 定位到按钮上方居中
+            const rect = e.currentTarget.getBoundingClientRect();
+            const scrollY = window.scrollY || document.documentElement.scrollTop;
+            tooltip.style.left = rect.left + rect.width / 2 - tooltip.offsetWidth / 2 + 'px';
+            tooltip.style.top = rect.top - tooltip.offsetHeight - 8 + scrollY + 'px';
+        }
+        function hideTooltip() {
+            const tooltip = document.getElementById('global-tooltip');
+            tooltip.style.opacity = '0';
+        }
+        // 事件委托，动态绑定所有操作按钮
+        function bindOpBtnTooltip() {
+            document.querySelectorAll('.op-btn').forEach(btn => {
+                btn.addEventListener('mouseenter', showTooltip);
+                btn.addEventListener('mouseleave', hideTooltip);
+            });
+        }
+        // 重写loadFileTree，渲染后绑定tooltip
+        async function loadFileTree() {
+            const resp = await fetch('/api/filemanager/tree');
+            const data = await resp.json();
+            document.getElementById('file-tree').innerHTML = `<div class='w-full overflow-x-auto'><table class='min-w-full text-sm text-left whitespace-nowrap'><thead><tr class='border-b text-gray-500'><th class='py-1 px-2 font-normal'>文件名</th><th class='py-1 px-2 font-normal'>类型</th><th class='py-1 px-2 font-normal'>大小</th><th class='py-1 px-2 font-normal'>修改时间</th><th class='py-1 px-2 font-normal text-right'>操作</th></tr></thead><tbody>${renderTree(data, '', 0)}</tbody></table></div>`;
+            bindOpBtnTooltip();
+        }
+    </script>
+</body>
+</html>
+<div id="custom-tooltip" style="position:fixed;z-index:9999;pointer-events:none;display:none;" class="bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap shadow-lg"></div>
+<script>
+// tooltip 事件绑定
+function bindOpBtnTooltips() {
+    const tooltip = document.getElementById('custom-tooltip');
+    document.querySelectorAll('.op-btn').forEach(btn => {
+        btn.addEventListener('mouseenter', function(e) {
+            tooltip.textContent = btn.getAttribute('data-tooltip');
+            tooltip.style.display = 'block';
+            const rect = btn.getBoundingClientRect();
+            tooltip.style.left = (rect.left + rect.width/2 - tooltip.offsetWidth/2) + 'px';
+            tooltip.style.top = (rect.top - tooltip.offsetHeight - 8) + 'px';
+        });
+        btn.addEventListener('mousemove', function(e) {
+            const rect = btn.getBoundingClientRect();
+            tooltip.style.left = (rect.left + rect.width/2 - tooltip.offsetWidth/2) + 'px';
+            tooltip.style.top = (rect.top - tooltip.offsetHeight - 8) + 'px';
+        });
+        btn.addEventListener('mouseleave', function() {
+            tooltip.style.display = 'none';
+        });
+    });
+}
+// 在每次渲染文件树后绑定
+async function loadFileTree() {
+    const resp = await fetch('/api/filemanager/tree');
+    const data = await resp.json();
+    document.getElementById('file-tree').innerHTML = `<div class='w-full overflow-x-auto'><table class='min-w-full text-sm text-left whitespace-nowrap'><thead><tr class='border-b text-gray-500'><th class='py-1 px-2 font-normal'>文件名</th><th class='py-1 px-2 font-normal'>类型</th><th class='py-1 px-2 font-normal'>大小</th><th class='py-1 px-2 font-normal'>修改时间</th><th class='py-1 px-2 font-normal text-right'>操作</th></tr></thead><tbody>${renderTree(data, '', 0)}</tbody></table></div>`;
+    bindOpBtnTooltips();
+}
+</script>
