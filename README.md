@@ -45,8 +45,8 @@ git clone https://github.com/3iXi/beeline.git
      e. **重要安装步骤**  
         ✅ 勾选"Add Python 3.11 to PATH"  
         ✅ 选择"Customize installation"  
-        ✅ 在可选功能中勾选：
-          - "pip"
+        ✅ 在可选功能中勾选：  
+          - "pip"  
           - "py launcher"
 
      f. **完成安装**  
@@ -63,9 +63,16 @@ pip install -r requirements.txt
 
 ## 运行
 
+有两种方式可以启动程序：
+
+1. 使用Python直接运行（推荐开发使用）：
 ```bash
 python main.py
 ```
+
+2. 通过可执行文件运行（需先安装Python环境）：  
+双击运行“**beeline_launcher.exe**”
+
 
 访问 http://localhost:8000 即可打开BeeLine Web控制台。
 
