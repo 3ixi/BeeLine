@@ -45,13 +45,17 @@ def run_script(task_id):
         # 准备用于子进程的环境变量
         subprocess_env = os.environ.copy()
         subprocess_env.update(env_vars)
+        subprocess_env['PYTHONIOENCODING'] = 'utf-8'  # 设置Python IO编码
 
         process = subprocess.Popen(
             ["python", script_path],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            env=subprocess_env
+            encoding='utf-8',  # 设置输出编码
+            errors='replace',  # 处理无法解码的字符
+            env=subprocess_env,
+            cwd="scripts"  # 设置工作目录
         )
         stdout, stderr = process.communicate()
 
