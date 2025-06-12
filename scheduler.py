@@ -54,8 +54,7 @@ def run_script(task_id):
             text=True,
             encoding='utf-8',  # 设置输出编码
             errors='replace',  # 处理无法解码的字符
-            env=subprocess_env,
-            cwd="scripts"  # 设置工作目录
+            env=subprocess_env
         )
         stdout, stderr = process.communicate()
 
