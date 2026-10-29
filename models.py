@@ -1,8 +1,7 @@
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, Boolean, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, Boolean, ForeignKey, event
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
-from passlib.context import CryptContext
 
 Base = declarative_base()
 
@@ -12,7 +11,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now)
 
 class Script(Base):
     __tablename__ = "scripts"
@@ -58,11 +57,11 @@ class TaskLog(Base):
     __tablename__ = "task_logs"
 
     id = Column(Integer, primary_key=True, index=True)
-    task_id = Column(Integer, ForeignKey("tasks.id"))
+    task_id = Column(Integer, ForeignKey("tasks.id"), index=True)
     status = Column(String(20), nullable=False)  # success, failed, running
     output = Column(Text)
     error = Column(Text)
-    started_at = Column(DateTime, default=datetime.now)
+    started_at = Column(DateTime, default=datetime.now, index=True)
     finished_at = Column(DateTime, nullable=True)
     
     task = relationship("Task", back_populates="logs")
@@ -81,13 +80,47 @@ class Session(Base):
 
     id = Column(String, primary_key=True, index=True)
     username = Column(String, ForeignKey("users.username"), index=True)
-    expires = Column(DateTime)
+    expires = Column(DateTime, index=True)
 
     user = relationship("User")
 
+class AppSetting(Base):
+    """系统级配置（数据维护、执行策略等），与环境变量表隔离，避免污染脚本运行环境。"""
+    __tablename__ = "app_settings"
+
+    key = Column(String(100), primary_key=True)
+    value = Column(Text)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
 # 创建数据库引擎
-engine = create_engine("sqlite:///beeline.db")
+# timeout：SQLite 写锁等待秒数，避免多线程/调度器/子进程并发写入时立刻抛 "database is locked"
+engine = create_engine(
+    "sqlite:///beeline.db",
+    connect_args={"timeout": 30, "check_same_thread": False},
+    future=True,
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
+@event.listens_for(engine, "connect")
+def _set_sqlite_pragmas(dbapi_connection, connection_record):
+    """每条连接建立时统一 PRAGMA。
+
+    - journal_mode=WAL：读写并发不互斥，降低 Web 请求与调度任务之间的锁冲突
+    - synchronous=NORMAL：WAL 下兼顾安全与性能
+    - busy_timeout：写锁等待 30 秒，超出才报错
+    - foreign_keys：显式开启外键约束
+    """
+    cursor = dbapi_connection.cursor()
+    try:
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.execute("PRAGMA busy_timeout=30000")
+        cursor.execute("PRAGMA foreign_keys=ON")
+    except Exception:
+        pass
+    finally:
+        cursor.close()
+
 # 创建所有表
-Base.metadata.create_all(bind=engine) 
+Base.metadata.create_all(bind=engine)

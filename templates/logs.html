@@ -120,6 +120,19 @@
         <!-- 主内容区 -->
         <div class="flex-1 overflow-auto">
             <div class="p-4 lg:p-8">
+                <!-- 正在运行的任务：实时日志入口 -->
+                <div id="running-banner" class="hidden mb-4 bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-green-900 flex items-center">
+                            <i class="fas fa-circle-notch fa-spin mr-2"></i>
+                            正在运行
+                            <span id="running-count" class="ml-2 px-2 py-0.5 rounded-full bg-green-200 text-green-900 text-xs"></span>
+                        </h3>
+                        <span class="text-xs text-green-700">日志每 2 秒自动刷新</span>
+                    </div>
+                    <div id="running-banner-list" class="mt-3 space-y-2"></div>
+                </div>
+
                 <div class="bg-white rounded-lg shadow-md overflow-hidden">
                     <div class="p-4 lg:p-6 border-b">
                         <div class="flex justify-between items-center">
@@ -179,11 +192,18 @@
                                                 bg-green-100 text-green-800
                                             {% elif log.status == 'failed' %}
                                                 bg-red-100 text-red-800
+                                            {% elif log.status == 'stopped' %}
+                                                bg-gray-200 text-gray-700
                                             {% else %}
                                                 bg-yellow-100 text-yellow-800
                                             {% endif %}">
-                                            {{ '成功' if log.status == 'success' else '失败' if log.status == 'failed' else '运行中' }}
+                                            {{ '成功' if log.status == 'success' else '失败' if log.status == 'failed' else '已停止' if log.status == 'stopped' else '运行中' }}
                                         </span>
+                                        {% if log.status == 'running' %}
+                                        <span class="ml-1 inline-flex items-center text-xs text-green-700">
+                                            <span class="w-1.5 h-1.5 bg-green-500 rounded-full mr-1 animate-pulse"></span>实时
+                                        </span>
+                                        {% endif %}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         {{ log.started_at.strftime('%m月%d日 %H:%M:%S') }}
@@ -272,12 +292,27 @@
             <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full">
                 <div class="p-6">
                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-medium text-gray-900">日志详情</h3>
-                        <button onclick="hideLogDetails()" class="text-gray-400 hover:text-gray-500">
-                            <i class="fas fa-times"></i>
-                        </button>
+                        <div class="flex items-center space-x-2">
+                            <h3 class="text-lg font-medium text-gray-900">日志详情</h3>
+                            <span id="log-live-indicator" class="hidden inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <span class="w-1.5 h-1.5 bg-green-500 rounded-full mr-1 animate-pulse"></span>实时更新中
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <button id="log-stop-btn" onclick="stopFromLogModal()"
+                                class="hidden items-center px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700">
+                                <i class="fas fa-stop mr-1"></i>停止任务
+                            </button>
+                            <button onclick="hideLogDetails()" class="text-gray-400 hover:text-gray-500">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="space-y-4">
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-700">状态</h4>
+                            <p id="log-status" class="mt-1 text-sm text-gray-900"></p>
+                        </div>
                         <div>
                             <h4 class="text-sm font-medium text-gray-700">耗时</h4>
                             <p id="log-duration" class="mt-1 p-2 bg-gray-50 rounded-lg text-sm text-gray-900"></p>
@@ -342,59 +377,190 @@
             }
         });
 
-        // 日志详情模态框控制
-        async function showLogDetails(logId) {
+        // ===== 日志详情与实时刷新 =====
+        let liveTimer = null;
+        let currentLogId = null;
+        let currentTaskId = null;
+
+        function formatDuration(totalSeconds) {
+            const seconds = Math.max(0, Math.floor(totalSeconds || 0));
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const sec = seconds % 60;
+            if (h > 0) return `${h} 小时 ${m} 分 ${sec} 秒`;
+            if (m > 0) return `${m} 分 ${sec} 秒`;
+            return `${sec} 秒`;
+        }
+
+        function statusText(status) {
+            if (status === 'success') return '成功';
+            if (status === 'failed') return '失败';
+            if (status === 'stopped') return '已停止';
+            if (status === 'running') return '运行中';
+            return status || '未知';
+        }
+
+        async function fetchLog(logId) {
             try {
                 const response = await fetch(`/logs/${logId}`);
-                if (!response.ok) {
-                    throw new Error('Failed to fetch log details');
+                if (!response.ok) return null;
+                return await response.json();
+            } catch (err) {
+                return null;
+            }
+        }
+
+        function renderLogDetail(data) {
+            const running = data.status === 'running';
+
+            document.getElementById('log-status').textContent =
+                `${statusText(data.status)}${data.task_name ? ' · ' + data.task_name : ''}`;
+
+            document.getElementById('log-duration').textContent = data.elapsed_seconds === null
+                ? '任务未开始'
+                : (running ? `已运行 ${formatDuration(data.elapsed_seconds)}` : formatDuration(data.elapsed_seconds));
+
+            const outEl = document.getElementById('log-output');
+            const errEl = document.getElementById('log-error');
+            const nearBottom = (el) => el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+            const stickOut = running ? nearBottom(outEl) : false;
+            const stickErr = running ? nearBottom(errEl) : false;
+
+            outEl.textContent = data.output || (running ? '（等待输出…）' : '无输出');
+            errEl.textContent = data.error || '无错误';
+
+            if (stickOut) outEl.scrollTop = outEl.scrollHeight;
+            if (stickErr) errEl.scrollTop = errEl.scrollHeight;
+
+            document.getElementById('log-live-indicator').classList.toggle('hidden', !running);
+            const stopBtn = document.getElementById('log-stop-btn');
+            stopBtn.classList.toggle('hidden', !running);
+            stopBtn.classList.toggle('inline-flex', running);
+        }
+
+        function stopLivePolling() {
+            if (liveTimer) {
+                clearInterval(liveTimer);
+                liveTimer = null;
+            }
+            document.getElementById('log-live-indicator').classList.add('hidden');
+        }
+
+        function startLivePolling() {
+            stopLivePolling();
+            liveTimer = setInterval(async () => {
+                if (!currentLogId) return;
+                const data = await fetchLog(currentLogId);
+                if (!data) return;
+                renderLogDetail(data);
+                if (data.status !== 'running') {
+                    stopLivePolling();
+                    document.getElementById('log-stop-btn').classList.add('hidden');
+                    showToast(`任务已结束：${statusText(data.status)}`);
+                    refreshRunningBanner();
                 }
-                
-                const data = await response.json();
-                const logDurationElement = document.getElementById('log-duration');
+            }, 2000);
+        }
 
-                // 计算并显示持续时间（需处理可能存在的空值/无效日期）
-                let durationText = '任务未完成或无时间信息';
-                if (data.started_at && data.finished_at) {
-                    try {
-                        const start = new Date(data.started_at);
-                        const end = new Date(data.finished_at);
-
-                        // 检查日期是否有效
-                        if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-                             const durationMs = end - start; // 持续时间（毫秒）
-
-                            // 将毫秒转换为人类可读的格式（例如，秒、分钟、小时）
-                            const totalSeconds = Math.floor(durationMs / 1000);
-                            const hours = Math.floor(totalSeconds / 3600);
-                            const minutes = Math.floor((totalSeconds % 3600) / 60);
-                            const seconds = totalSeconds % 60;
-
-                            if (hours > 0) {
-                                durationText = `${hours} 小时 ${minutes} 分 ${seconds} 秒`;
-                            } else if (minutes > 0) {
-                                durationText = `${minutes} 分 ${seconds} 秒`;
-                            } else {
-                                durationText = `${totalSeconds} 秒`;
-                            }
-                        }
-                    } catch (e) {
-                        console.error("Error parsing dates or calculating duration:", e);
-                        durationText = '计算时长失败';
-                    }
-                }
-                logDurationElement.textContent = durationText;
-                document.getElementById('log-details-modal').classList.remove('hidden');
-                document.getElementById('log-output').textContent = data.output || '无输出';
-                document.getElementById('log-error').textContent = data.error || '无错误';
-            } catch (error) {
+        async function showLogDetails(logId) {
+            stopLivePolling();
+            currentLogId = logId;
+            const data = await fetchLog(logId);
+            if (!data) {
                 showToast('获取日志详情失败');
+                return;
+            }
+            currentTaskId = data.task_id;
+            renderLogDetail(data);
+            document.getElementById('log-details-modal').classList.remove('hidden');
+            if (data.status === 'running') {
+                startLivePolling();
             }
         }
 
         function hideLogDetails() {
+            stopLivePolling();
+            currentLogId = null;
             document.getElementById('log-details-modal').classList.add('hidden');
         }
+
+        async function stopFromLogModal() {
+            if (!currentTaskId) return;
+            if (!confirm('确定要停止该任务吗？正在执行的脚本进程（含子进程）会被强制终止。')) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/tasks/${currentTaskId}/stop`, { method: 'POST' });
+                const data = await response.json();
+                showToast(response.ok ? (data.message || '已发送停止指令') : (data.detail || '停止失败'));
+            } catch (err) {
+                showToast('停止失败');
+            }
+        }
+
+        // ===== 正在运行任务横幅 =====
+        async function refreshRunningBanner() {
+            let data = null;
+            try {
+                const resp = await fetch('/api/running-tasks');
+                if (!resp.ok) return;
+                data = await resp.json();
+            } catch (err) {
+                return;
+            }
+            const items = data.tasks || [];
+            const banner = document.getElementById('running-banner');
+            const list = document.getElementById('running-banner-list');
+            document.getElementById('running-count').textContent = items.length;
+
+            if (items.length === 0) {
+                banner.classList.add('hidden');
+                list.innerHTML = '';
+                return;
+            }
+
+            banner.classList.remove('hidden');
+            list.innerHTML = items.map(item => `
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-white border border-green-200 rounded-md px-3 py-2">
+                    <div class="flex items-center text-sm text-gray-800">
+                        <i class="fas fa-play text-green-600 mr-2 text-xs"></i>
+                        <span class="font-medium">${escapeHtml(item.task_name)}</span>
+                        <span class="ml-2 text-xs text-gray-500">已运行 ${formatDuration(item.elapsed_seconds)}${item.stopping ? ' · 正在停止…' : ''}</span>
+                    </div>
+                    <div class="mt-2 sm:mt-0 flex items-center space-x-2">
+                        <button onclick="showLogDetails(${item.log_id})" class="px-3 py-1 text-xs font-medium text-green-700 bg-green-50 border border-green-300 rounded hover:bg-green-100">
+                            <i class="fas fa-eye mr-1"></i>实时日志
+                        </button>
+                        <button onclick="stopRunningTask(${item.task_id})" class="px-3 py-1 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700">
+                            <i class="fas fa-stop mr-1"></i>停止
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text == null ? '' : text;
+            return div.innerHTML;
+        }
+
+        async function stopRunningTask(taskId) {
+            if (!confirm('确定要停止该任务吗？正在执行的脚本进程（含子进程）会被强制终止。')) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/tasks/${taskId}/stop`, { method: 'POST' });
+                const data = await response.json();
+                showToast(response.ok ? (data.message || '已发送停止指令') : (data.detail || '停止失败'));
+                setTimeout(refreshRunningBanner, 800);
+            } catch (err) {
+                showToast('停止失败');
+            }
+        }
+
+        refreshRunningBanner();
+        setInterval(refreshRunningBanner, 3000);
 
         // 清除日志功能
         async function clearLogs() {

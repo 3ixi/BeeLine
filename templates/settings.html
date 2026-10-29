@@ -200,6 +200,134 @@
                         </div>
                     </div>
 
+                    <!-- 数据维护与自动清理 -->
+                    <div class="mt-10">
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 shadow-sm">
+                            <h3 class="text-lg font-semibold mb-2 flex items-center">
+                                <i class="fas fa-broom text-emerald-600 mr-2"></i> 数据维护与自动清理
+                            </h3>
+                            <p class="text-xs text-gray-500 mb-4">
+                                运行日志会持续写入 SQLite。清理只删除记录，数据库文件不会自动缩小，
+                                因此清理后会自动执行一次空间回收（VACUUM）。建议保持每日自动清理开启。
+                            </p>
+
+                            <!-- 实时状态 -->
+                            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                                <div class="bg-white border border-gray-200 rounded-lg p-3">
+                                    <div class="text-xs text-gray-500">数据库体积</div>
+                                    <div id="stat-db-size" class="text-lg font-semibold text-gray-800 mt-1">--</div>
+                                    <div id="stat-db-extra" class="text-xs text-gray-400 mt-0.5">&nbsp;</div>
+                                </div>
+                                <div class="bg-white border border-gray-200 rounded-lg p-3">
+                                    <div class="text-xs text-gray-500">日志条数</div>
+                                    <div id="stat-log-count" class="text-lg font-semibold text-gray-800 mt-1">--</div>
+                                    <div id="stat-table-extra" class="text-xs text-gray-400 mt-0.5">&nbsp;</div>
+                                </div>
+                                <div class="bg-white border border-gray-200 rounded-lg p-3">
+                                    <div class="text-xs text-gray-500">可回收空间</div>
+                                    <div id="stat-reclaimable" class="text-lg font-semibold text-amber-600 mt-1">--</div>
+                                    <div class="text-xs text-gray-400 mt-0.5">空页占用量</div>
+                                </div>
+                                <div class="bg-white border border-gray-200 rounded-lg p-3">
+                                    <div class="text-xs text-gray-500">上次清理</div>
+                                    <div id="stat-last-run" class="text-sm font-semibold text-gray-800 mt-1">尚未执行</div>
+                                    <div id="stat-last-result" class="text-xs text-gray-400 mt-0.5 truncate" title="">&nbsp;</div>
+                                </div>
+                            </div>
+
+                            <!-- 策略表单 -->
+                            <form id="cleanup-form" class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="md:col-span-2 flex items-center justify-between bg-white border border-gray-200 rounded-lg px-4 py-3">
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-700">启用每日自动清理</div>
+                                        <div class="text-xs text-gray-500 mt-0.5">关闭后仍可通过下方按钮手动清理</div>
+                                    </div>
+                                    <input type="checkbox" id="cleanup-enabled"
+                                        class="h-5 w-5 accent-emerald-600 cursor-pointer"
+                                        {% if cleanup.enabled %}checked{% endif %}>
+                                </div>
+
+                                <div>
+                                    <label for="cleanup-days" class="block text-sm font-medium text-gray-700">日志保留天数</label>
+                                    <input type="number" id="cleanup-days" min="0" max="3650"
+                                        value="{{ cleanup.log_retention_days }}"
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <p class="text-xs text-gray-400 mt-1">超过该天数的日志会被删除，0 表示不按天清理</p>
+                                </div>
+
+                                <div>
+                                    <label for="cleanup-keep" class="block text-sm font-medium text-gray-700">每个任务最多保留条数</label>
+                                    <input type="number" id="cleanup-keep" min="0" max="1000000"
+                                        value="{{ cleanup.max_logs_per_task }}"
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <p class="text-xs text-gray-400 mt-1">高频任务只保留最近若干次记录，0 表示不限制</p>
+                                </div>
+
+                                <div>
+                                    <label for="cleanup-output-kb" class="block text-sm font-medium text-gray-700">单条日志输出上限 (KB)</label>
+                                    <input type="number" id="cleanup-output-kb" min="0" max="10485760"
+                                        value="{{ cleanup.max_output_kb }}"
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <p class="text-xs text-gray-400 mt-1">写入时截断超长 stdout/stderr，0 表示不截断</p>
+                                </div>
+
+                                <div>
+                                    <label for="cleanup-hour" class="block text-sm font-medium text-gray-700">每日执行时刻</label>
+                                    <select id="cleanup-hour"
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                        {% for h in range(24) %}
+                                        <option value="{{ h }}" {% if h == cleanup.run_hour %}selected{% endif %}>{{ "%02d:00"|format(h) }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <p class="text-xs text-gray-400 mt-1">建议设置在业务低峰期</p>
+                                </div>
+
+                                <div>
+                                    <label for="cleanup-max-mb" class="block text-sm font-medium text-gray-700">数据库体积上限 (MB)</label>
+                                    <input type="number" id="cleanup-max-mb" min="0" max="1048576"
+                                        value="{{ cleanup.max_db_size_mb }}"
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <p class="text-xs text-gray-400 mt-1">超过后按最旧日志继续清理，0 表示不限制</p>
+                                </div>
+
+                                <div>
+                                    <label for="cleanup-vacuum" class="block text-sm font-medium text-gray-700">空间回收方式</label>
+                                    <select id="cleanup-vacuum"
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                        <option value="incremental" {% if cleanup.vacuum_mode == 'incremental' %}selected{% endif %}>增量回收（推荐，几乎不锁库）</option>
+                                        <option value="full" {% if cleanup.vacuum_mode == 'full' %}selected{% endif %}>全量压缩（最彻底，期间写入阻塞）</option>
+                                        <option value="none" {% if cleanup.vacuum_mode == 'none' %}selected{% endif %}>不回收（仅删除记录）</option>
+                                    </select>
+                                    <p class="text-xs text-gray-400 mt-1">增量模式需首次迁移，系统已在启动时自动完成</p>
+                                </div>
+
+                                <div>
+                                    <label for="cleanup-timeout" class="block text-sm font-medium text-gray-700">脚本执行超时 (秒)</label>
+                                    <input type="number" id="cleanup-timeout" min="0" max="604800"
+                                        value="{{ cleanup.execution_timeout_seconds }}"
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <p class="text-xs text-gray-400 mt-1">超时后强制终止进程并标记失败，0 表示不限制</p>
+                                </div>
+                            </form>
+
+                            <div class="mt-6 flex flex-col sm:flex-row sm:items-center gap-3">
+                                <button id="cleanup-save" type="button"
+                                    class="flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-md shadow hover:bg-blue-700 transition">
+                                    <i class="fas fa-save mr-2"></i> 保存清理策略
+                                </button>
+                                <button id="cleanup-now" type="button"
+                                    class="flex items-center justify-center px-5 py-2.5 text-sm font-medium text-white bg-emerald-600 rounded-md shadow hover:bg-emerald-700 transition">
+                                    <i class="fas fa-broom mr-2"></i> 立即清理并压缩
+                                </button>
+                                <button id="vacuum-now" type="button"
+                                    class="flex items-center justify-center px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 transition">
+                                    <i class="fas fa-compress-alt mr-2"></i> 仅压缩数据库
+                                </button>
+                            </div>
+                            <p id="cleanup-hint" class="text-xs text-gray-500 mt-3"></p>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -283,7 +411,132 @@
             }
         });
 
-        // 可选：如果更倾向于客户端提交，可添加使用 fetch 的表单提交处理
+        // ===== 数据维护与自动清理 =====
+        const fmtBytes = (bytes) => {
+            if (!bytes || bytes < 0) return '0 B';
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            let i = 0, n = bytes;
+            while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+            return `${n.toFixed(n >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
+        };
+
+        const hintEl = document.getElementById('cleanup-hint');
+        let maintTimer = null;
+
+        async function loadMaintStatus() {
+            try {
+                const resp = await fetch('/api/maintenance/status');
+                if (!resp.ok) return null;
+                const data = await resp.json();
+                const s = data.stats || {};
+                const t = s.tables || {};
+                document.getElementById('stat-db-size').textContent = fmtBytes(s.db_size);
+                document.getElementById('stat-db-extra').textContent = `WAL ${fmtBytes(s.wal_size)}`;
+                document.getElementById('stat-log-count').textContent = (t.task_logs || 0).toLocaleString();
+                document.getElementById('stat-table-extra').textContent = `任务 ${t.tasks || 0} · 会话 ${t.sessions || 0}`;
+                document.getElementById('stat-reclaimable').textContent = fmtBytes(s.reclaimable);
+                document.getElementById('stat-last-run').textContent = s.last_run || '尚未执行';
+                const resultEl = document.getElementById('stat-last-result');
+                resultEl.textContent = s.last_result || '';
+                resultEl.title = s.last_result || '';
+                return data;
+            } catch (err) {
+                return null;
+            }
+        }
+
+        function setMaintBusy(busy) {
+            ['cleanup-save', 'cleanup-now', 'vacuum-now'].forEach(id => {
+                document.getElementById(id).disabled = busy;
+                document.getElementById(id).classList.toggle('opacity-50', busy);
+                document.getElementById(id).classList.toggle('cursor-not-allowed', busy);
+            });
+        }
+
+        async function waitForMaintFinish() {
+            setMaintBusy(true);
+            hintEl.textContent = '维护任务执行中，请稍候…';
+            let ticks = 0;
+            if (maintTimer) clearInterval(maintTimer);
+            maintTimer = setInterval(async () => {
+                ticks += 1;
+                const data = await loadMaintStatus();
+                if (!data) return;
+                if (!data.busy || ticks > 300) {
+                    clearInterval(maintTimer);
+                    maintTimer = null;
+                    setMaintBusy(false);
+                    const s = data.stats || {};
+                    hintEl.textContent = s.last_result
+                        ? `上次清理：${s.last_run || ''} ${s.last_result}`
+                        : '维护任务已结束';
+                    if (s.last_result) showToast(s.last_result);
+                }
+            }, 2000);
+        }
+
+        document.getElementById('cleanup-save').addEventListener('click', async () => {
+            const payload = {
+                'cleanup.enabled': document.getElementById('cleanup-enabled').checked,
+                'cleanup.log_retention_days': document.getElementById('cleanup-days').value,
+                'cleanup.max_logs_per_task': document.getElementById('cleanup-keep').value,
+                'cleanup.max_output_kb': document.getElementById('cleanup-output-kb').value,
+                'cleanup.run_hour': document.getElementById('cleanup-hour').value,
+                'cleanup.max_db_size_mb': document.getElementById('cleanup-max-mb').value,
+                'cleanup.vacuum_mode': document.getElementById('cleanup-vacuum').value,
+                'execution.timeout_seconds': document.getElementById('cleanup-timeout').value
+            };
+            try {
+                const resp = await fetch('/api/maintenance/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await resp.json();
+                if (resp.ok) {
+                    showToast(result.message || '清理策略已保存');
+                    hintEl.textContent = result.settings && result.settings.enabled
+                        ? `已启用：每天 ${String(result.settings.run_hour).padStart(2, '0')}:00 执行`
+                        : '自动清理已关闭';
+                } else {
+                    showToast(result.detail || '保存失败');
+                }
+            } catch (err) {
+                showToast('保存失败');
+            }
+        });
+
+        document.getElementById('cleanup-now').addEventListener('click', async () => {
+            try {
+                const resp = await fetch('/api/maintenance/cleanup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ vacuum: true })
+                });
+                const result = await resp.json();
+                showToast(result.message || result.detail || '已提交');
+                if (resp.ok) waitForMaintFinish();
+            } catch (err) {
+                showToast('提交失败');
+            }
+        });
+
+        document.getElementById('vacuum-now').addEventListener('click', async () => {
+            try {
+                const resp = await fetch('/api/maintenance/vacuum', { method: 'POST' });
+                const result = await resp.json();
+                showToast(result.message || result.detail || '已提交');
+                if (resp.ok) waitForMaintFinish();
+            } catch (err) {
+                showToast('提交失败');
+            }
+        });
+
+        loadMaintStatus();
+        setInterval(() => { if (!maintTimer) loadMaintStatus(); }, 30000);
+
+        // 可选：如果更倾向于客户端提交
+，可添加使用 fetch 的表单提交处理
         // document.getElementById('settings-form').addEventListener('submit', async (e) => {
         //     e.preventDefault();
         //     const formData = new FormData(e.target);

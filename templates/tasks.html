@@ -154,6 +154,10 @@
                                         <div class="flex items-center">
                                             <i class="fas fa-clock text-blue-600 mr-2"></i>
                                             <span class="text-sm font-medium text-gray-900">{{ task.name }}</span>
+                                            <span id="run-badge-{{ task.id }}"
+                                                class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 {% if task.id not in running_task_ids %}hidden{% endif %}">
+                                                <span class="w-1.5 h-1.5 bg-green-500 rounded-full mr-1 animate-pulse"></span>运行中
+                                            </span>
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm">
@@ -186,13 +190,22 @@
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <div class="flex items-center space-x-3">
-                                            <!-- 运行按钮 -->
-                                            <div class="group relative">
+                                            <!-- 运行 / 停止 按钮（按运行状态切换） -->
+                                            <div class="group relative {% if task.id in running_task_ids %}hidden{% endif %}" id="run-wrap-{{ task.id }}">
                                                 <button onclick="runTask({{ task.id }})" class="text-green-600 hover:text-green-900">
                                                     <i class="fas fa-play"></i>
                                                 </button>
                                                 <span class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
                                                     运行
+                                                    <span class="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-800 transform rotate-45 -mb-1"></span>
+                                                </span>
+                                            </div>
+                                            <div class="group relative {% if task.id not in running_task_ids %}hidden{% endif %}" id="stop-wrap-{{ task.id }}">
+                                                <button onclick="stopTask({{ task.id }})" class="text-red-600 hover:text-red-800">
+                                                    <i class="fas fa-stop"></i>
+                                                </button>
+                                                <span class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                                                    停止
                                                     <span class="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-800 transform rotate-45 -mb-1"></span>
                                                 </span>
                                             </div>
@@ -653,6 +666,35 @@
             }
         }
 
+        let runningTaskIds = new Set();
+
+        function applyRunningState(ids) {
+            runningTaskIds = new Set(ids.map(Number));
+            document.querySelectorAll('[id^="run-wrap-"]').forEach(el => {
+                const id = Number(el.id.replace('run-wrap-', ''));
+                el.classList.toggle('hidden', runningTaskIds.has(id));
+            });
+            document.querySelectorAll('[id^="stop-wrap-"]').forEach(el => {
+                const id = Number(el.id.replace('stop-wrap-', ''));
+                el.classList.toggle('hidden', !runningTaskIds.has(id));
+            });
+            document.querySelectorAll('[id^="run-badge-"]').forEach(el => {
+                const id = Number(el.id.replace('run-badge-', ''));
+                el.classList.toggle('hidden', !runningTaskIds.has(id));
+            });
+        }
+
+        async function refreshRunningState() {
+            try {
+                const resp = await fetch('/api/running-tasks');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                applyRunningState((data.tasks || []).map(item => item.task_id));
+            } catch (err) {
+                // 轮询失败不影响页面使用
+            }
+        }
+
         async function runTask(taskId) {
             try {
                 const response = await fetch(`/tasks/${taskId}/run`, {
@@ -660,17 +702,41 @@
                 });
 
                 const data = await response.json();
-                if (data.status === "running") {
-                    showToast('脚本正在运行');
-                } else if (response.ok) {
-                    showToast('任务已提交运行');
+                if (response.ok) {
+                    showToast(data.status === "running" ? '脚本正在运行' : '任务已提交运行');
+                    // 先本地切换为“停止”，随后由轮询校准真实状态
+                    applyRunningState([...runningTaskIds, taskId]);
                 } else {
-                    showToast('运行失败');
+                    showToast(data.detail || '运行失败');
                 }
+                setTimeout(refreshRunningState, 1200);
             } catch (error) {
                 showToast('运行失败');
             }
         }
+
+        async function stopTask(taskId) {
+            if (!confirm('确定要停止该任务吗？正在执行的脚本进程（含子进程）会被强制终止。')) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/tasks/${taskId}/stop`, {
+                    method: 'POST',
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    showToast(data.message || '已发送停止指令');
+                } else {
+                    showToast(data.detail || data.message || '停止失败');
+                }
+                setTimeout(refreshRunningState, 800);
+            } catch (error) {
+                showToast('停止失败');
+            }
+        }
+
+        refreshRunningState();
+        setInterval(refreshRunningState, 5000);
 
         async function deleteTask(taskId) {
             if (!confirm('确定要删除这个任务吗？')) {

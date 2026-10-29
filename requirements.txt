@@ -12,7 +12,7 @@ sqlalchemy>=2.0.23        # ORM工具
 # ===== 安全与身份验证 =====
 python-jose>=3.3.0        # JWT支持
 passlib>=1.7.4            # 密码哈希
-bcrypt>=4.0.1             # 强加密算法
+bcrypt>=4.0.1,<4.1        # 强加密算法（passlib 1.7.4 读取 bcrypt>=4.1 的版本号会报错，故锁定上界）
 
 # ===== 工具库 =====
 croniter>=2.0.1           # Cron表达式解析
